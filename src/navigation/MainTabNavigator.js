@@ -10,6 +10,12 @@ import CommunityScreen from "../screens/main/CommunityScreen"
 import PlaceDetailsScreen from "../screens/PlaceDetailsScreen"
 import ProfileScreen from "../screens/ProfileScreen"
 import SettingsScreen from "../screens/SettingsScreen"
+import EditProfileScreen from "../screens/EditProfileScreen"
+import AccessibilityPreferencesScreen from "../screens/AccessibilityPreferencesScreen"
+import NotificationsScreen from "../screens/NotificationsScreen"
+import MyReviewsScreen from "../screens/MyReviewsScreen"
+import MyFavoritesScreen from "../screens/MyFavoritesScreen"
+import DatabaseTestScreen from "../screens/DatabaseTestScreen"
 
 const Tab = createBottomTabNavigator()
 const Stack = createStackNavigator()
@@ -27,7 +33,13 @@ function ProfileStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="ProfileMain" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: "Edit Profile" }} />
+      <Stack.Screen name="AccessibilityPreferences" component={AccessibilityPreferencesScreen} options={{ title: "Accessibility" }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: "Notifications" }} />
+      <Stack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: "My Reviews" }} />
+      <Stack.Screen name="MyFavorites" component={MyFavoritesScreen} options={{ title: "My Favorites" }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
+      <Stack.Screen name="DatabaseTest" component={DatabaseTestScreen} options={{ title: "Database Test" }} />
     </Stack.Navigator>
   )
 }

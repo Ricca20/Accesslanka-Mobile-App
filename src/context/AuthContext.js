@@ -3,6 +3,8 @@ import { DatabaseService } from '../lib/database'
 
 const AuthContext = createContext({})
 
+export { AuthContext }
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {

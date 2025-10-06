@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { View, StyleSheet, ScrollView, Alert, Linking } from "react-native"
-import { Text, Card, Switch, List, Divider, Button, SegmentedButtons, Chip, Dialog, Portal } from "react-native-paper"
+import { View, StyleSheet, ScrollView, Alert, Linking, TouchableOpacity, Dimensions } from "react-native"
+import { Text, Card, Switch, List, Divider, Button, SegmentedButtons, Chip, Dialog, Portal, IconButton, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useTheme } from "../context/ThemeContext"
 import { useSettings } from "../context/SettingsContext"
@@ -18,17 +18,42 @@ export default function SettingsScreen() {
   }
 
   const handleSettingChange = (key, value) => {
+    console.log('Setting change:', { key, value, currentSettings: settings })
     triggerHapticFeedback('light')
     
     // Handle accessibility settings that affect theme
-    if (key === 'largeText' || key === 'highContrast') {
-      const newAccessibilitySettings = {
+    if (key === 'largeText' || key === 'highContrast' || key === 'textSizeLevel') {
+      // Create the new accessibility settings object
+      let newAccessibilitySettings = {
         ...themeAccessibilitySettings,
         [key]: value
       }
+      
+      // Auto-sync largeText and textSizeLevel
+      if (key === 'largeText') {
+        if (value && themeAccessibilitySettings.textSizeLevel === 0) {
+          newAccessibilitySettings.textSizeLevel = 1
+        } else if (!value) {
+          newAccessibilitySettings.textSizeLevel = 0
+        }
+      } else if (key === 'textSizeLevel') {
+        newAccessibilitySettings.largeText = value > 0
+      }
+      
+      console.log('Updating accessibility settings:', newAccessibilitySettings)
+      
+      // Update theme context first
       updateAccessibilitySettings(newAccessibilitySettings)
-      // Also update in regular settings for persistence
+      
+      // Update settings context for all changed values
       updateSetting(key, value)
+      if (key === 'largeText' && value && themeAccessibilitySettings.textSizeLevel === 0) {
+        updateSetting('textSizeLevel', 1)
+      } else if (key === 'largeText' && !value) {
+        updateSetting('textSizeLevel', 0)
+      } else if (key === 'textSizeLevel') {
+        updateSetting('largeText', value > 0)
+      }
     } else {
       updateSetting(key, value)
     }
@@ -43,7 +68,7 @@ export default function SettingsScreen() {
     setShowResetDialog(false)
     resetToDefaults()
     // Also reset accessibility settings
-    updateAccessibilitySettings({ largeText: false, highContrast: false })
+    updateAccessibilitySettings({ largeText: false, textSizeLevel: 0, highContrast: false })
     triggerHapticFeedback('success')
   }
 
@@ -69,6 +94,7 @@ export default function SettingsScreen() {
       description: "Increase text size for better readability",
       key: "largeText",
       icon: "format-size",
+      expandable: true, // This setting has expandable content
     },
     {
       title: "High Contrast",
@@ -135,6 +161,99 @@ export default function SettingsScreen() {
         item.key === 'pushNotifications' && isExpoGo && !notificationsAvailable && styles.disabledItem
       ]}
     />
+  )
+
+  const renderLargeTextSetting = () => (
+    <View key="largeText">
+      <List.Item
+        title="Large Text"
+        description="Increase text size for better readability"
+        left={(props) => <List.Icon {...props} icon="format-size" />}
+        right={() => (
+          <Switch
+            value={settings.largeText}
+            onValueChange={(value) => handleSettingChange('largeText', value)}
+            accessibilityLabel="Toggle Large Text"
+          />
+        )}
+        style={styles.settingItem}
+      />
+      
+      {settings.largeText && (
+        <View style={styles.textSizeContainer}>
+          <View style={styles.textSizeHeader}>
+            <Text variant="bodyMedium" style={styles.textSizeLabel}>
+              Text Size Level
+            </Text>
+            <Chip 
+              mode="outlined" 
+              textStyle={styles.levelChipText}
+              style={styles.levelChip}
+            >
+              {['Normal', 'Large', 'Extra Large', 'Huge'][settings.textSizeLevel] || 'Normal'}
+            </Chip>
+          </View>
+          
+          <View style={styles.sliderContainer}>
+            <View style={styles.sliderLabels}>
+              <Text variant="bodySmall" style={styles.sliderLabelText}>Normal</Text>
+              <Text variant="bodySmall" style={styles.sliderLabelText}>Large</Text>
+              <Text variant="bodySmall" style={styles.sliderLabelText}>Extra</Text>
+              <Text variant="bodySmall" style={styles.sliderLabelText}>Huge</Text>
+            </View>
+            
+            <View style={styles.buttonSliderContainer}>
+              {[0, 1, 2, 3].map((level) => (
+                <TouchableOpacity
+                  key={level}
+                  style={[
+                    styles.sliderButton,
+                    {
+                      backgroundColor: settings.textSizeLevel === level 
+                        ? currentTheme.colors.primary 
+                        : currentTheme.colors.surfaceVariant
+                    }
+                  ]}
+                  onPress={() => {
+                    triggerHapticFeedback('light')
+                    handleSettingChange('textSizeLevel', level)
+                  }}
+                >
+                  <View 
+                    style={[
+                      styles.sliderButtonInner,
+                      {
+                        backgroundColor: settings.textSizeLevel === level 
+                          ? currentTheme.colors.surface 
+                          : 'transparent'
+                      }
+                    ]}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.previewContainer}>
+            <Text variant="bodySmall" style={styles.previewLabel}>
+              Preview:
+            </Text>
+            <Text 
+              variant="bodyMedium" 
+              style={[
+                styles.previewText,
+                { 
+                  fontSize: 16 * [1.0, 1.2, 1.4, 1.6][settings.textSizeLevel],
+                  color: currentTheme.colors.onSurface 
+                }
+              ]}
+            >
+              This is how your text will look
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
   )
 
   const languages = [
@@ -331,10 +450,16 @@ export default function SettingsScreen() {
             <Text variant="bodySmall" style={styles.sectionDescription}>
               Customize the app for your accessibility needs
             </Text>
-            {accessibilitySettings.map((item, index) => (
+            
+            {/* Large Text with expandable slider */}
+            {renderLargeTextSetting()}
+            <Divider />
+            
+            {/* Other accessibility settings */}
+            {accessibilitySettings.slice(1).map((item, index) => (
               <View key={item.key}>
                 {renderSettingItem(item)}
-                {index < accessibilitySettings.length - 1 && <Divider />}
+                {index < accessibilitySettings.length - 2 && <Divider />}
               </View>
             ))}
           </Card.Content>
@@ -592,5 +717,86 @@ const createStyles = (theme) => StyleSheet.create({
   },
   languageItem: {
     paddingVertical: 4,
+  },
+  // Text size control styles
+  textSizeContainer: {
+    marginTop: 8,
+    marginHorizontal: 8,
+    padding: 16,
+    backgroundColor: theme.colors.surfaceContainer,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.outline + '30',
+  },
+  textSizeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  textSizeLabel: {
+    color: theme.colors.onSurface,
+    fontWeight: '600',
+  },
+  levelChip: {
+    backgroundColor: theme.colors.primary + '15',
+    borderColor: theme.colors.primary,
+  },
+  levelChipText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  sliderContainer: {
+    marginBottom: 16,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+  sliderLabelText: {
+    color: theme.colors.onSurface,
+    opacity: 0.7,
+    fontSize: 11,
+    textAlign: 'center',
+    flex: 1,
+  },
+  buttonSliderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginTop: 8,
+  },
+  sliderButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sliderButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  previewContainer: {
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.outline + '20',
+  },
+  previewLabel: {
+    color: theme.colors.onSurface,
+    opacity: 0.7,
+    marginBottom: 8,
+  },
+  previewText: {
+    color: theme.colors.onSurface,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 })

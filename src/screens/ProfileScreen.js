@@ -1,27 +1,104 @@
-import { View, StyleSheet, ScrollView } from "react-native"
+import { View, StyleSheet, ScrollView, Alert } from "react-native"
 import { Text, Card, Button, Avatar, List, Divider } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
+import { useAuth } from "../context/AuthContext"
+import { useEffect, useState } from "react"
+import { DatabaseService } from "../lib/database"
 
 export default function ProfileScreen({ navigation }) {
+  const { user, signOut, loading } = useAuth()
+  const [userProfile, setUserProfile] = useState(null)
+  const [userStats, setUserStats] = useState({
+    reviewsCount: 0,
+    favoritesCount: 0,
+    helpfulVotes: 0,
+  })
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUserProfile()
+      loadUserStats()
+    }
+  }, [user])
+
+  const loadUserProfile = async () => {
+    try {
+      const profile = await DatabaseService.getUserProfile(user.id)
+      setUserProfile(profile)
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    }
+  }
+
+  const loadUserStats = async () => {
+    try {
+      const stats = await DatabaseService.getUserStats(user.id)
+      setUserStats(stats)
+    } catch (error) {
+      console.error('Error loading user stats:', error)
+      // Keep default stats if error
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      Alert.alert(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Sign Out",
+            style: "destructive",
+            onPress: async () => {
+              await signOut()
+              // Navigation will be handled by the AppNavigator
+            }
+          }
+        ]
+      )
+    } catch (error) {
+      Alert.alert("Error", "Failed to sign out. Please try again.")
+      console.error('Sign out error:', error)
+    }
+  }
+
+  // Show loading or not authenticated state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <Text>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <Text>Please sign in to view your profile.</Text>
+          <Button mode="contained" onPress={() => navigation.navigate('Login')} style={{ marginTop: 16 }}>
+            Sign In
+          </Button>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  // Get user data (from auth user and profile)
   const userData = {
-    name: "Priya Silva",
-    email: "priya.silva@email.com",
-    avatar: "PS",
-    joinDate: "January 2024",
-    reviewsCount: 15,
-    favoritesCount: 8,
-    badges: [
-      { name: "Accessibility Champion", icon: "trophy", color: "#FFD700" },
-      { name: "Community Helper", icon: "account-group", color: "#4CAF50" },
-      { name: "Review Master", icon: "star", color: "#FF9800" },
-    ],
-    stats: {
-      placesReviewed: 15,
-      helpfulVotes: 42,
-      communityPosts: 8,
-      mapMissionsCompleted: 3,
-    },
+    name: userProfile?.full_name || user.user_metadata?.full_name || user.email || "User",
+    email: user.email || "No email",
+    avatar: (userProfile?.full_name || user.email || "U").substring(0, 2).toUpperCase(),
+    joinDate: userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently",
+    reviewsCount: userStats.reviewsCount,
+    favoritesCount: userStats.favoritesCount,
   }
 
   const menuItems = [
@@ -29,31 +106,37 @@ export default function ProfileScreen({ navigation }) {
       title: "My Reviews",
       description: `${userData.reviewsCount} reviews written`,
       icon: "star-outline",
-      onPress: () => {},
+      onPress: () => navigation.navigate("MyReviews"),
     },
     {
       title: "My Favorites",
       description: `${userData.favoritesCount} places saved`,
       icon: "heart-outline",
-      onPress: () => {},
+      onPress: () => navigation.navigate("MyFavorites"),
     },
     {
       title: "Accessibility Preferences",
       description: "Customize your experience",
       icon: "cog-outline",
-      onPress: () => {},
+      onPress: () => navigation.navigate("AccessibilityPreferences"),
     },
     {
       title: "Notifications",
       description: "Manage notification settings",
       icon: "bell-outline",
-      onPress: () => {},
+      onPress: () => navigation.navigate("Notifications"),
     },
     {
       title: "Settings",
       description: "Account and app settings",
       icon: "settings-outline",
       onPress: () => navigation.navigate("Settings"),
+    },
+    {
+      title: "Database Test",
+      description: "Insert sample review data",
+      icon: "database-outline",
+      onPress: () => navigation.navigate("DatabaseTest"),
     },
   ]
 
@@ -98,23 +181,25 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </View>
 
-            <Button mode="outlined" style={styles.editButton} onPress={() => {}} accessibilityLabel="Edit profile">
+            <Button mode="outlined" style={styles.editButton} onPress={() => navigation.navigate("EditProfile")} accessibilityLabel="Edit profile">
               Edit Profile
             </Button>
           </Card.Content>
         </Card>
 
-        {/* Badges Section */}
+        {/* Badges Section - Future Feature */}
+        {/* 
         <Card style={styles.badgesCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Badges Earned
             </Text>
-            <View style={styles.badgesContainer}>
-              {userData.badges.map((badge, index) => renderBadge(badge, index))}
-            </View>
+            <Text variant="bodyMedium" style={{ textAlign: 'center', color: '#666' }}>
+              Badges coming soon! Keep writing reviews and helping the community.
+            </Text>
           </Card.Content>
         </Card>
+        */}
 
         {/* Stats Section */}
         <Card style={styles.statsCard}>
@@ -123,10 +208,10 @@ export default function ProfileScreen({ navigation }) {
               Your Impact
             </Text>
             <View style={styles.statsContainer}>
-              {renderStat("Places\nReviewed", userData.stats.placesReviewed)}
-              {renderStat("Helpful\nVotes", userData.stats.helpfulVotes)}
-              {renderStat("Community\nPosts", userData.stats.communityPosts)}
-              {renderStat("MapMissions\nCompleted", userData.stats.mapMissionsCompleted)}
+              {renderStat("Reviews\nWritten", userStats.reviewsCount)}
+              {renderStat("Helpful\nVotes", userStats.helpfulVotes)}
+              {renderStat("Favorite\nPlaces", userStats.favoritesCount)}
+              {renderStat("Member\nSince", userData.joinDate.split(' ')[1] || 'Recently')}
             </View>
           </Card.Content>
         </Card>
@@ -156,7 +241,7 @@ export default function ProfileScreen({ navigation }) {
           <Button
             mode="outlined"
             icon="logout"
-            onPress={() => {}}
+            onPress={handleSignOut}
             style={styles.signOutButton}
             accessibilityLabel="Sign out of account"
           >
@@ -172,6 +257,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   profileCard: {
     margin: 16,
