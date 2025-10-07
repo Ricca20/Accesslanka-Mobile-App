@@ -23,7 +23,20 @@
     },
     "plugins": [
       "expo-location",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share business images.",
+          "cameraPermission": "The app accesses your camera to let you take photos of your business."
+        }
+      ]
+    ],
+    "permissions": [
+      "CAMERA",
+      "CAMERA_ROLL",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION"
     ]
   }
 }

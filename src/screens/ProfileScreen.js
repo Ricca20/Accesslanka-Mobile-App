@@ -115,6 +115,18 @@ export default function ProfileScreen({ navigation }) {
       onPress: () => navigation.navigate("MyFavorites"),
     },
     {
+      title: "Add My Business",
+      description: "Submit your business for listing",
+      icon: "store-plus-outline",
+      onPress: () => navigation.navigate("AddMyBusiness"),
+    },
+    {
+      title: "My Business Submissions",
+      description: "View your submitted businesses",
+      icon: "clipboard-list-outline",
+      onPress: () => navigation.navigate("MyBusinessSubmissions"),
+    },
+    {
       title: "Accessibility Preferences",
       description: "Customize your experience",
       icon: "cog-outline",

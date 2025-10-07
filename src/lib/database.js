@@ -451,31 +451,54 @@ export class DatabaseService {
 
   // Review replies
   static async createReviewReply(replyData) {
-    const { data, error } = await supabase
-      .from('review_replies')
-      .insert([replyData])
-      .select(`
-        *,
-        user:users(full_name, verified)
-      `)
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from('review_replies')
+        .insert([replyData])
+        .select(`
+          *,
+          user:users(full_name, verified)
+        `)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) {
+        // Check if the error is due to missing table
+        if (error.code === 'PGRST205' && error.message.includes('review_replies')) {
+          throw new Error('Reply functionality is not available yet. The review_replies table needs to be created in the database.')
+        }
+        throw error
+      }
+      return data
+    } catch (error) {
+      console.error('Error creating review reply:', error)
+      throw error
+    }
   }
 
   static async getReviewReplies(reviewId) {
-    const { data, error } = await supabase
-      .from('review_replies')
-      .select(`
-        *,
-        user:users(full_name, verified)
-      `)
-      .eq('review_id', reviewId)
-      .order('created_at', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('review_replies')
+        .select(`
+          *,
+          user:users(full_name, verified)
+        `)
+        .eq('review_id', reviewId)
+        .order('created_at', { ascending: true })
 
-    if (error) throw error
-    return data || []
+      if (error) {
+        // Check if the error is due to missing table
+        if (error.code === 'PGRST205' && error.message.includes('review_replies')) {
+          console.warn('Review replies table not found, returning empty array')
+          return []
+        }
+        throw error
+      }
+      return data || []
+    } catch (error) {
+      console.error('Error getting review replies:', error)
+      return []
+    }
   }
 
   static async updateReviewReply(id, updates) {
@@ -942,6 +965,261 @@ export class DatabaseService {
 
     } catch (error) {
       console.error('Error inserting sample data:', error)
+      throw error
+    }
+  }
+
+  // Business submission methods
+  static async createBusinessSubmission(userId, businessData) {
+    try {
+      // Map photos to images to match database schema
+      const { photos, ...restData } = businessData
+      
+      const businessRecord = {
+        ...restData,
+        images: photos || [], // Map photos to images
+        created_by: userId,
+        status: 'pending', // Set default status as pending
+        verified: false,   // Business is not verified until approved
+      }
+
+      const { data, error } = await supabase
+        .from('businesses')
+        .insert([businessRecord])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating business submission:', error)
+      throw error
+    }
+  }
+
+  static async getUserBusinessSubmissions(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error getting user business submissions:', error)
+      return []
+    }
+  }
+
+  static async updateBusinessSubmissionStatus(businessId, status) {
+    try {
+      const { data, error } = await supabase
+        .from('businesses')
+        .update({ 
+          status: status,
+          verified: status === 'approved'
+        })
+        .eq('id', businessId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating business submission status:', error)
+      throw error
+    }
+  }
+
+  // MapMission methods
+  static async createMapMission(missionData) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .insert([missionData])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating MapMission:', error)
+      throw error
+    }
+  }
+
+  static async getMapMissions(options = {}) {
+    try {
+      let query = supabase
+        .from('mapmissions')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (options.status) {
+        query = query.eq('status', options.status)
+      }
+
+      if (options.business_id) {
+        query = query.eq('business_id', options.business_id)
+      }
+
+      if (options.created_by) {
+        query = query.eq('created_by', options.created_by)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching MapMissions:', error)
+      throw error
+    }
+  }
+
+  static async joinMapMission(missionId, userId) {
+    try {
+      // First check if user is already a participant
+      const { data: existing, error: checkError } = await supabase
+        .from('mapmission_participants')
+        .select('id')
+        .eq('mission_id', missionId)
+        .eq('user_id', userId)
+        .single()
+
+      if (existing) {
+        throw new Error('User is already participating in this mission')
+      }
+
+      // Add user as participant
+      const { data, error } = await supabase
+        .from('mapmission_participants')
+        .insert([{
+          mission_id: missionId,
+          user_id: userId,
+          joined_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error joining MapMission:', error)
+      throw error
+    }
+  }
+
+  static async getMissionParticipants(missionId) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmission_participants')
+        .select(`
+          *,
+          users (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('mission_id', missionId)
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching mission participants:', error)
+      throw error
+    }
+  }
+
+  static async updateMissionStatus(missionId, status) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .update({ status })
+        .eq('id', missionId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating mission status:', error)
+      throw error
+    }
+  }
+
+  static async getActiveMissionForBusiness(businessId) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .select('*')
+        .eq('business_id', businessId)
+        .in('status', ['upcoming', 'active'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 means no results found, which is expected sometimes
+        throw error
+      }
+
+      return data || null
+    } catch (error) {
+      if (error.code === 'PGRST116') {
+        return null // No active mission found
+      }
+      console.error('Error fetching active mission for business:', error)
+      throw error
+    }
+  }
+
+  static async isUserInMission(missionId, userId) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmission_participants')
+        .select('id')
+        .eq('mission_id', missionId)
+        .eq('user_id', userId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        throw error
+      }
+
+      return !!data
+    } catch (error) {
+      if (error.code === 'PGRST116') {
+        return false // User not in mission
+      }
+      console.error('Error checking user mission participation:', error)
+      throw error
+    }
+  }
+
+  static async getMissionStats(missionId) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmission_participants')
+        .select('id, progress, completed_at')
+        .eq('mission_id', missionId)
+
+      if (error) throw error
+
+      const participants = data || []
+      return {
+        totalParticipants: participants.length,
+        activeParticipants: participants.filter(p => !p.completed_at).length,
+        completedParticipants: participants.filter(p => p.completed_at).length,
+        averageProgress: participants.length > 0 
+          ? participants.reduce((sum, p) => sum + (p.progress || 0), 0) / participants.length 
+          : 0
+      }
+    } catch (error) {
+      console.error('Error fetching mission stats:', error)
       throw error
     }
   }

@@ -15,6 +15,9 @@ import AccessibilityPreferencesScreen from "../screens/AccessibilityPreferencesS
 import NotificationsScreen from "../screens/NotificationsScreen"
 import MyReviewsScreen from "../screens/MyReviewsScreen"
 import MyFavoritesScreen from "../screens/MyFavoritesScreen"
+import AddMyBusinessScreen from "../screens/AddMyBusinessScreen"
+import MyBusinessSubmissionsScreen from "../screens/MyBusinessSubmissionsScreen"
+import CreateMapMissionScreen from "../screens/CreateMapMissionScreen"
 import DatabaseTestScreen from "../screens/DatabaseTestScreen"
 
 const Tab = createBottomTabNavigator()
@@ -29,6 +32,16 @@ function ExploreStack() {
   )
 }
 
+function MapMissionStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="MapMissionMain" component={MapMissionScreen} options={{ title: "MapMission" }} />
+      <Stack.Screen name="CreateMapMission" component={CreateMapMissionScreen} options={{ title: "Create MapMission" }} />
+      <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} options={{ title: "Place Details" }} />
+    </Stack.Navigator>
+  )
+}
+
 function ProfileStack() {
   return (
     <Stack.Navigator>
@@ -38,6 +51,8 @@ function ProfileStack() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: "Notifications" }} />
       <Stack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: "My Reviews" }} />
       <Stack.Screen name="MyFavorites" component={MyFavoritesScreen} options={{ title: "My Favorites" }} />
+      <Stack.Screen name="AddMyBusiness" component={AddMyBusinessScreen} options={{ title: "Add My Business" }} />
+      <Stack.Screen name="MyBusinessSubmissions" component={MyBusinessSubmissionsScreen} options={{ title: "My Business Submissions" }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
       <Stack.Screen name="DatabaseTest" component={DatabaseTestScreen} options={{ title: "Database Test" }} />
     </Stack.Navigator>
@@ -81,7 +96,7 @@ export default function MainTabNavigator() {
     >
       <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Reviews" component={ReviewsScreen} />
-      <Tab.Screen name="MapMission" component={MapMissionScreen} />
+      <Tab.Screen name="MapMission" component={MapMissionStack} />
       <Tab.Screen name="Businesses" component={BusinessesScreen} />
       <Tab.Screen name="Community" component={CommunityScreen} />
       <Tab.Screen name="Profile" component={ProfileStack} />

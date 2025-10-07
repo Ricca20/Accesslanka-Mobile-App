@@ -367,12 +367,18 @@ export default function ReviewsScreen({ navigation }) {
   }
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    })
+    if (!dateString) return "Unknown date"
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return "Invalid date"
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+    } catch (error) {
+      return "Unknown date"
+    }
   }
 
   const getUserInitials = (name) => {
@@ -381,8 +387,10 @@ export default function ReviewsScreen({ navigation }) {
   }
 
   const renderReview = ({ item }) => {
-    const placeName = item.place?.name || item.business?.name || "Unknown Location"
-    const userName = item.user?.full_name || item.user?.name || "Anonymous User"
+    if (!item) return null
+    
+    const placeName = item.place?.name || item.business?.name || item.place_name || item.business_name || "Unknown Location"
+    const userName = item.user?.full_name || item.user?.name || item.user_name || "Anonymous User"
     const userInitials = getUserInitials(userName)
     const accessibilityRatings = item.accessibility_ratings || {}
     const replies = item.replies || []
@@ -414,9 +422,9 @@ export default function ReviewsScreen({ navigation }) {
 
           <View style={styles.ratingContainer}>
             <View style={styles.overallRating}>
-              <View style={styles.starsContainer}>{renderStars(item.overall_rating)}</View>
+              <View style={styles.starsContainer}>{renderStars(item.overall_rating || 0)}</View>
               <Text variant="bodySmall" style={[styles.ratingText, { color: theme.colors.onSurfaceVariant }]}>
-                {item.overall_rating}/5
+                {item.overall_rating || 0}/5
               </Text>
             </View>
           </View>
@@ -432,7 +440,7 @@ export default function ReviewsScreen({ navigation }) {
           )}
 
           <Text variant="bodyMedium" style={[styles.reviewText, { color: theme.colors.onSurface }]}>
-            {item.content}
+            {item.content || "No content available"}
           </Text>
 
           <View style={styles.reviewActions}>
@@ -440,10 +448,10 @@ export default function ReviewsScreen({ navigation }) {
               mode="text" 
               icon={item.isHelpful ? "thumb-up" : "thumb-up-outline"} 
               compact
-              onPress={() => handleHelpful(item.id, item.isHelpful)}
+              onPress={() => handleHelpful(item.id, item.isHelpful || false)}
               textColor={item.isHelpful ? theme.colors.primary : theme.colors.onSurfaceVariant}
             >
-              Helpful {item.helpful_count > 0 && `(${item.helpful_count})`}
+              Helpful {(item.helpful_count || 0) > 0 && `(${item.helpful_count || 0})`}
             </Button>
             <Button 
               mode="text" 
@@ -516,7 +524,7 @@ export default function ReviewsScreen({ navigation }) {
         <FlatList
           data={getFilteredReviews()}
           renderItem={renderReview}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => (item?.id || Math.random()).toString()}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
