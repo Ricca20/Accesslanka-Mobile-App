@@ -1,14 +1,18 @@
-import { useState } from "react"
-import { View, StyleSheet, ScrollView, Dimensions } from "react-native"
-import { Text, Card, Button, Chip, Divider } from "react-native-paper"
+import { useState, useRef } from "react"
+import { View, StyleSheet, ScrollView, Dimensions, Image, FlatList, TouchableOpacity } from "react-native"
+import { Text, Card, Button, Chip, Divider, Badge } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 
 const { width } = Dimensions.get("window")
+const IMAGE_WIDTH = width
+const IMAGE_HEIGHT = 250
 
 export default function PlaceDetailsScreen({ route = { params: {} }, navigation = {} }) {
   const { place } = route.params
   const [isFavorite, setIsFavorite] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const flatListRef = useRef(null)
 
   // Mock data if no place is provided
   const placeData = place || {
@@ -71,12 +75,72 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
     )
   }
 
+  // Handle image scroll
+  const handleScroll = (event) => {
+    const scrollPosition = event.nativeEvent.contentOffset.x
+    const index = Math.round(scrollPosition / IMAGE_WIDTH)
+    setCurrentImageIndex(index)
+  }
+
+  // Render image item
+  const renderImageItem = ({ item }) => (
+    <View style={styles.imageSlide}>
+      <Image
+        source={{ uri: item }}
+        style={styles.carouselImage}
+        resizeMode="cover"
+      />
+    </View>
+  )
+
+  // Determine wheelchair accessibility status
+  const getAccessibilityStatus = () => {
+    if (placeData.isGooglePlace) {
+      return placeData.wheelchairAccessible ? 'yes' : 'unknown'
+    }
+    
+    // Check features for wheelchair access
+    const hasWheelchairAccess = placeData.features?.some(f => 
+      f.toLowerCase().includes('wheelchair') || 
+      f.toLowerCase().includes('ramp') ||
+      f.toLowerCase().includes('elevator')
+    )
+    
+    if (hasWheelchairAccess) return 'yes'
+    if (placeData.accessibilityRating >= 3.5) return 'yes'
+    if (placeData.accessibilityRating >= 2) return 'partial'
+    return 'unknown'
+  }
+
+  const accessibilityStatus = getAccessibilityStatus()
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header Image */}
+        {/* Image Carousel */}
         <View style={styles.imageContainer}>
-          <Card.Cover source={{ uri: placeData.images[0] }} style={styles.headerImage} />
+          <FlatList
+            ref={flatListRef}
+            data={placeData.images || []}
+            renderItem={renderImageItem}
+            keyExtractor={(item, index) => index.toString()}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          />
+          
+          {/* Image Counter */}
+          {placeData.images && placeData.images.length > 1 && (
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>
+                {currentImageIndex + 1} / {placeData.images.length}
+              </Text>
+            </View>
+          )}
+
+          {/* Favorite Button Overlay */}
           <View style={styles.imageOverlay}>
             <Button
               mode="contained-tonal"
@@ -87,6 +151,31 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
             >
               {isFavorite ? "Saved" : "Save"}
             </Button>
+          </View>
+
+          {/* Wheelchair Accessibility Badge - Like Google Maps */}
+          <View style={styles.accessibilityBadge}>
+            <View style={[
+              styles.wheelchairBadge,
+              accessibilityStatus === 'yes' && styles.wheelchairBadgeYes,
+              accessibilityStatus === 'partial' && styles.wheelchairBadgePartial,
+              accessibilityStatus === 'unknown' && styles.wheelchairBadgeUnknown,
+            ]}>
+              <Icon 
+                name="wheelchair-accessibility" 
+                size={20} 
+                color={accessibilityStatus === 'yes' ? '#2E7D32' : accessibilityStatus === 'partial' ? '#FF9800' : '#666'} 
+              />
+              <Text style={[
+                styles.wheelchairText,
+                accessibilityStatus === 'yes' && styles.wheelchairTextYes,
+                accessibilityStatus === 'partial' && styles.wheelchairTextPartial,
+              ]}>
+                {accessibilityStatus === 'yes' && 'Wheelchair accessible'}
+                {accessibilityStatus === 'partial' && 'Partially accessible'}
+                {accessibilityStatus === 'unknown' && 'Accessibility unknown'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -122,6 +211,45 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
 
           <Divider style={styles.divider} />
 
+          {/* Photo Gallery Thumbnails */}
+          {placeData.images && placeData.images.length > 1 && (
+            <>
+              <View style={styles.section}>
+                <Text variant="titleMedium" style={styles.sectionTitle}>
+                  Photos ({placeData.images.length})
+                </Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.thumbnailScroll}
+                >
+                  {placeData.images.map((image, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      onPress={() => {
+                        setCurrentImageIndex(index)
+                        flatListRef.current?.scrollToIndex({ index, animated: true })
+                      }}
+                      style={styles.thumbnailContainer}
+                    >
+                      <Image
+                        source={{ uri: image }}
+                        style={[
+                          styles.thumbnail,
+                          currentImageIndex === index && styles.thumbnailActive
+                        ]}
+                      />
+                      {currentImageIndex === index && (
+                        <View style={styles.thumbnailActiveBorder} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              <Divider style={styles.divider} />
+            </>
+          )}
+
           {/* Description */}
           <View style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -134,35 +262,62 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
 
           <Divider style={styles.divider} />
 
+          {/* Prominent Wheelchair Accessibility Section */}
+          <View style={styles.section}>
+            <View style={styles.accessibilityHeaderSection}>
+              <Icon name="wheelchair-accessibility" size={28} color="#2E7D32" />
+              <View style={styles.accessibilityHeaderText}>
+                <Text variant="titleMedium" style={styles.sectionTitle}>
+                  Wheelchair Accessibility
+                </Text>
+                <Text variant="bodySmall" style={styles.accessibilitySubtext}>
+                  {accessibilityStatus === 'yes' && 'This place has wheelchair accessible facilities'}
+                  {accessibilityStatus === 'partial' && 'This place has limited accessibility'}
+                  {accessibilityStatus === 'unknown' && 'Accessibility information not verified'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
           {/* Accessibility Features */}
           <View style={styles.section}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Accessibility Features
             </Text>
             <View style={styles.featuresContainer}>
-              {placeData.features.map((feature) => (
-                <Chip key={feature} style={styles.featureChip} icon="check">
-                  {feature}
-                </Chip>
-              ))}
+              {placeData.features && placeData.features.length > 0 ? (
+                placeData.features.map((feature, index) => (
+                  <Chip key={index} style={styles.featureChip} icon="check">
+                    {feature}
+                  </Chip>
+                ))
+              ) : (
+                <Text variant="bodyMedium" style={styles.noFeaturesText}>
+                  No accessibility features reported yet
+                </Text>
+              )}
             </View>
           </View>
 
           <Divider style={styles.divider} />
 
           {/* Detailed Accessibility Ratings */}
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Accessibility Ratings
-            </Text>
-            <View style={styles.accessibilityGrid}>
-              {Object.entries(placeData.accessibilityDetails).map(([category, rating]) => (
-                <View key={category}>
-                  {renderAccessibilityRating(category, rating)}
-                </View>
-              ))}
+          {placeData.accessibilityDetails && (
+            <View style={styles.section}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Accessibility Ratings
+              </Text>
+              <View style={styles.accessibilityGrid}>
+                {Object.entries(placeData.accessibilityDetails).map(([category, rating]) => (
+                  <View key={category}>
+                    {renderAccessibilityRating(category, rating)}
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
           <Divider style={styles.divider} />
 
@@ -227,10 +382,30 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: "relative",
+    height: IMAGE_HEIGHT,
+    backgroundColor: '#000',
   },
-  headerImage: {
-    height: 200,
-    width: width,
+  imageSlide: {
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+  },
+  carouselImage: {
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  imageCounterText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   imageOverlay: {
     position: "absolute",
@@ -239,6 +414,52 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     backgroundColor: "rgba(255, 255, 255, 0.9)",
+  },
+  accessibilityBadge: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+  },
+  wheelchairBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  wheelchairBadgeYes: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderWidth: 1,
+    borderColor: '#2E7D32',
+  },
+  wheelchairBadgePartial: {
+    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: '#FF9800',
+  },
+  wheelchairBadgeUnknown: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  wheelchairText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  wheelchairTextYes: {
+    color: '#2E7D32',
+  },
+  wheelchairTextPartial: {
+    color: '#FF9800',
   },
   content: {
     padding: 16,
@@ -297,9 +518,55 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
   },
+  thumbnailScroll: {
+    marginTop: 8,
+  },
+  thumbnailContainer: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  thumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    opacity: 0.6,
+  },
+  thumbnailActive: {
+    opacity: 1,
+    borderWidth: 3,
+    borderColor: '#2E7D32',
+  },
+  thumbnailActiveBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#2E7D32',
+  },
   description: {
     color: "#666",
     lineHeight: 22,
+  },
+  accessibilityHeaderSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2E7D32',
+  },
+  accessibilityHeaderText: {
+    flex: 1,
+  },
+  accessibilitySubtext: {
+    color: '#666',
+    marginTop: 4,
+    lineHeight: 18,
   },
   featuresContainer: {
     flexDirection: "row",
@@ -308,6 +575,10 @@ const styles = StyleSheet.create({
   },
   featureChip: {
     backgroundColor: "#E8F5E8",
+  },
+  noFeaturesText: {
+    color: '#999',
+    fontStyle: 'italic',
   },
   accessibilityGrid: {
     gap: 16,

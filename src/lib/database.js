@@ -23,8 +23,53 @@ export class DatabaseService {
       .eq('id', userId)
       .single()
 
-    if (error) throw error
+    // If profile doesn't exist (PGRST116 error), return null instead of throwing
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log(`Profile not found for user ${userId}, may need to be created`)
+        return null
+      }
+      throw error
+    }
     return data
+  }
+
+  static async ensureUserProfile(userId, userData = {}) {
+    // Try to get existing profile
+    const existingProfile = await this.getUserProfile(userId)
+    
+    if (existingProfile) {
+      return existingProfile
+    }
+
+    // Profile doesn't exist, create it
+    console.log(`Creating profile for user ${userId}`)
+    const { data: authUser } = await supabase.auth.getUser()
+    
+    const profileData = {
+      id: userId,
+      email: userData.email || authUser?.user?.email || '',
+      full_name: userData.full_name || authUser?.user?.user_metadata?.full_name || '',
+      avatar_url: userData.avatar_url || '',
+      accessibility_needs: userData.accessibility_needs || '',
+      location: userData.location || '',
+      verified: false,
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([profileData])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error creating user profile:', error)
+      // If insert fails (e.g., race condition), try fetching again
+      return await this.getUserProfile(userId)
+    }
   }
 
   static async updateUserProfile(userId, updates) {

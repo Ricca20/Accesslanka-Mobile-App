@@ -49,7 +49,7 @@ export default function MyReviewsScreen({ navigation }) {
   }
 
   const renderAccessibilityRating = (ratings) => {
-    if (!ratings) return null
+    if (!ratings || typeof ratings !== 'object' || Object.keys(ratings).length === 0) return null
     const avgRating = Object.values(ratings).reduce((sum, val) => sum + val, 0) / Object.keys(ratings).length
     return (
       <View style={styles.accessibilityRating}>
