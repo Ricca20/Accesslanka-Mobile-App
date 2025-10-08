@@ -7,6 +7,8 @@ import OnboardingScreen from "../screens/OnboardingScreen"
 import LandingScreen from "../screens/LandingScreen"
 import LoginScreen from "../screens/auth/LoginScreen"
 import RegisterScreen from "../screens/auth/RegisterScreen"
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen"
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen"
 import MainTabNavigator from "./MainTabNavigator"
 import { useAuth } from "../context/AuthContext"
 
@@ -53,6 +55,8 @@ export default function AppNavigator() {
           <Stack.Screen name="Landing" component={LandingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </>
       )}
     </Stack.Navigator>

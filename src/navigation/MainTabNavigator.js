@@ -7,6 +7,7 @@ import ReviewsScreen from "../screens/main/ReviewsScreen"
 import MapMissionScreen from "../screens/main/MapMissionScreen"
 import BusinessesScreen from "../screens/main/BusinessesScreen"
 import CommunityScreen from "../screens/main/CommunityScreen"
+import ChatbotScreen from "../screens/ChatbotScreen"
 import PlaceDetailsScreen from "../screens/PlaceDetailsScreen"
 import AddReviewScreen from "../screens/AddReviewScreen"
 import ProfileScreen from "../screens/ProfileScreen"
@@ -19,7 +20,7 @@ import MyFavoritesScreen from "../screens/MyFavoritesScreen"
 import AddMyBusinessScreen from "../screens/AddMyBusinessScreen"
 import MyBusinessSubmissionsScreen from "../screens/MyBusinessSubmissionsScreen"
 import CreateMapMissionScreen from "../screens/CreateMapMissionScreen"
-import DatabaseTestScreen from "../screens/DatabaseTestScreen"
+
 
 const Tab = createBottomTabNavigator()
 const Stack = createStackNavigator()
@@ -28,6 +29,14 @@ function ExploreStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="ExploreMain" component={ExploreScreen} options={{ title: "Explore" }} />
+      <Stack.Screen 
+        name="Chatbot" 
+        component={ChatbotScreen} 
+        options={{ 
+          title: "AI Assistant",
+          presentation: 'modal'
+        }} 
+      />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} options={{ title: "Place Details" }} />
       <Stack.Screen name="AddReview" component={AddReviewScreen} options={{ title: "Write a Review" }} />
     </Stack.Navigator>
@@ -56,7 +65,7 @@ function ProfileStack() {
       <Stack.Screen name="AddMyBusiness" component={AddMyBusinessScreen} options={{ title: "Add My Business" }} />
       <Stack.Screen name="MyBusinessSubmissions" component={MyBusinessSubmissionsScreen} options={{ title: "My Business Submissions" }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
-      <Stack.Screen name="DatabaseTest" component={DatabaseTestScreen} options={{ title: "Database Test" }} />
+
     </Stack.Navigator>
   )
 }

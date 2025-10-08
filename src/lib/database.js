@@ -153,6 +153,24 @@ export class DatabaseService {
     if (error) throw error
   }
 
+  static async resetPassword(email) {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'accesslanka://reset-password',
+    })
+
+    if (error) throw error
+    return data
+  }
+
+  static async updatePassword(newPassword) {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+
+    if (error) throw error
+    return data
+  }
+
   static async getCurrentUser() {
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) throw error

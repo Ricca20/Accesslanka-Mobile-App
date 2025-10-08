@@ -193,6 +193,31 @@ const malabePlaces = [
     images: []
   },
   {
+<<<<<<< Updated upstream
+=======
+    name: 'Coffee Bean Malabe',
+    category: 'restaurants',
+    description: 'Cozy cafe serving coffee, tea, pastries, and light meals.',
+    address: 'SLIIT Campus, New Kandy Road, Malabe, Sri Lanka',
+    latitude: 6.9148,
+    longitude: 79.9728,
+    opening_hours: {
+      monday: '7:00 AM - 8:00 PM',
+      tuesday: '7:00 AM - 8:00 PM',
+      wednesday: '7:00 AM - 8:00 PM',
+      thursday: '7:00 AM - 8:00 PM',
+      friday: '7:00 AM - 8:00 PM',
+      saturday: '8:00 AM - 6:00 PM',
+      sunday: '8:00 AM - 6:00 PM'
+    },
+    phone: '+94 11 241 5678',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Accessible seating', 'Wide doorways'],
+    verified: true,
+    images: []
+  },
+  {
+>>>>>>> Stashed changes
     name: 'Malabe Medicare Hospital',
     category: 'healthcare',
     description: 'Private healthcare facility providing medical services, diagnostics, and emergency care.',
@@ -215,6 +240,31 @@ const malabePlaces = [
     images: []
   },
   {
+<<<<<<< Updated upstream
+=======
+    name: 'Malabe Pharmacy',
+    category: 'healthcare',
+    description: 'Community pharmacy providing prescription medications and health products.',
+    address: 'New Kandy Road, Malabe, Sri Lanka',
+    latitude: 6.9100,
+    longitude: 79.9715,
+    opening_hours: {
+      monday: '8:00 AM - 9:00 PM',
+      tuesday: '8:00 AM - 9:00 PM',
+      wednesday: '8:00 AM - 9:00 PM',
+      thursday: '8:00 AM - 9:00 PM',
+      friday: '8:00 AM - 9:00 PM',
+      saturday: '8:00 AM - 9:00 PM',
+      sunday: '9:00 AM - 6:00 PM'
+    },
+    phone: '+94 11 241 7890',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Wide aisles', 'Accessible service counter'],
+    verified: true,
+    images: []
+  },
+  {
+>>>>>>> Stashed changes
     name: 'Malabe Buddhist Temple',
     category: 'temple',
     description: 'Historic Buddhist temple serving the local community with daily worship and ceremonies.',
@@ -257,6 +307,405 @@ const malabePlaces = [
     accessibility_features: ['Wheelchair accessible entrance', 'Accessible parking', 'Ramps', 'Accessible ATM', 'Accessible counters'],
     verified: true,
     images: []
+<<<<<<< Updated upstream
+=======
+  },
+  {
+    name: 'People\'s Bank - Malabe',
+    category: 'government',
+    description: 'Government bank providing banking services to individuals and businesses.',
+    address: 'Kaduwela Road, Malabe, Sri Lanka',
+    latitude: 6.9060,
+    longitude: 79.9760,
+    opening_hours: {
+      monday: '9:00 AM - 3:00 PM',
+      tuesday: '9:00 AM - 3:00 PM',
+      wednesday: '9:00 AM - 3:00 PM',
+      thursday: '9:00 AM - 3:00 PM',
+      friday: '9:00 AM - 3:00 PM',
+      saturday: 'Closed',
+      sunday: 'Closed'
+    },
+    phone: '+94 11 241 0123',
+    website: 'https://www.peoplesbank.lk',
+    accessibility_features: ['Wheelchair accessible entrance', 'Ramps', 'Accessible ATM'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Malabe Post Office',
+    category: 'government',
+    description: 'Local post office providing postal services, money orders, and courier services.',
+    address: 'Malabe Town, Kaduwela Road, Malabe, Sri Lanka',
+    latitude: 6.9055,
+    longitude: 79.9742,
+    opening_hours: {
+      monday: '8:00 AM - 4:00 PM',
+      tuesday: '8:00 AM - 4:00 PM',
+      wednesday: '8:00 AM - 4:00 PM',
+      thursday: '8:00 AM - 4:00 PM',
+      friday: '8:00 AM - 4:00 PM',
+      saturday: '8:00 AM - 12:00 PM',
+      sunday: 'Closed'
+    },
+    phone: '+94 11 241 1234',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Ramps', 'Accessible service counter'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Galle Face Green',
+    category: 'parks',
+    description: 'A large open space and public park by the ocean, popular for picnics, sports, and evening walks.',
+    address: 'Galle Face Green, Colombo, Sri Lanka',
+    latitude: 6.9274,
+    longitude: 79.8560,
+    opening_hours: {
+      monday: '6:00 AM - 10:00 PM',
+      tuesday: '6:00 AM - 10:00 PM',
+      wednesday: '6:00 AM - 10:00 PM',
+      thursday: '6:00 AM - 10:00 PM',
+      friday: '6:00 AM - 10:00 PM',
+      saturday: '6:00 AM - 10:00 PM',
+      sunday: '6:00 AM - 10:00 PM'
+    },
+    phone: '',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Paved pathways', 'Accessible seating'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Colombo National Museum',
+    category: 'education',
+    description: 'Sri Lanka\'s largest museum, featuring a vast collection of art, history, and cultural artifacts.',
+    address: 'Albert Crescent, Colombo 7, Sri Lanka',
+    latitude: 6.9270,
+    longitude: 79.9510,
+    opening_hours: {
+      monday: '9:00 AM - 5:00 PM',
+      tuesday: '9:00 AM - 5:00 PM',
+      wednesday: '9:00 AM - 5:00 PM',
+      thursday: '9:00 AM - 5:00 PM',
+      friday: '9:00 AM - 5:00 PM',
+      saturday: '9:00 AM - 5:00 PM',
+      sunday: 'Closed'
+    },
+    phone: '+94 11 269 4112',
+    website: 'https://www.museum.gov.lk',
+    accessibility_features: ['Wheelchair accessible entrance', 'Accessible parking', 'Elevator access'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Pettah Market',
+    category: 'shopping',
+    description: 'Bustling market offering a variety of goods such as clothes, electronics, and street food.',
+    address: 'Pettah, Colombo, Sri Lanka',
+    latitude: 6.9330,
+    longitude: 79.8480,
+    opening_hours: {
+      monday: '9:00 AM - 7:00 PM',
+      tuesday: '9:00 AM - 7:00 PM',
+      wednesday: '9:00 AM - 7:00 PM',
+      thursday: '9:00 AM - 7:00 PM',
+      friday: '9:00 AM - 7:00 PM',
+      saturday: '9:00 AM - 7:00 PM',
+      sunday: 'Closed'
+    },
+    phone: '',
+    website: '',
+    accessibility_features: ['Wide aisles', 'Wheelchair accessible entrance', 'Accessible parking'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Gangaramaya Temple',
+    category: 'temple',
+    description: 'A Buddhist temple and cultural center in Colombo, known for its beautiful architecture and cultural significance.',
+    address: '61 Sri Jinarathana Road, Colombo, Sri Lanka',
+    latitude: 6.9276,
+    longitude: 79.8635,
+    opening_hours: {
+      monday: '5:30 AM - 10:00 PM',
+      tuesday: '5:30 AM - 10:00 PM',
+      wednesday: '5:30 AM - 10:00 PM',
+      thursday: '5:30 AM - 10:00 PM',
+      friday: '5:30 AM - 10:00 PM',
+      saturday: '5:30 AM - 10:00 PM',
+      sunday: '5:30 AM - 10:00 PM'
+    },
+    phone: '+94 11 232 5349',
+    website: 'http://www.gangaramaya.com',
+    accessibility_features: ['Wheelchair accessible entrance', 'Ramps', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Odel Department Store',
+    category: 'shopping',
+    description: 'Popular department store in Colombo offering clothing, accessories, and home goods.',
+    address: 'Steuart Place, Colombo 3, Sri Lanka',
+    latitude: 6.9278,
+    longitude: 79.8587,
+    opening_hours: {
+      monday: '10:00 AM - 7:00 PM',
+      tuesday: '10:00 AM - 7:00 PM',
+      wednesday: '10:00 AM - 7:00 PM',
+      thursday: '10:00 AM - 7:00 PM',
+      friday: '10:00 AM - 7:00 PM',
+      saturday: '10:00 AM - 7:00 PM',
+      sunday: 'Closed'
+    },
+    phone: '+94 11 238 4211',
+    website: 'https://www.odel.lk',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible parking'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Mount Lavinia Beach',
+    category: 'parks',
+    description: 'A popular beach destination for swimming, sunbathing, and enjoying seafood along the coast.',
+    address: 'Mount Lavinia, Colombo, Sri Lanka',
+    latitude: 6.8767,
+    longitude: 79.9739,
+    opening_hours: {
+      monday: '8:00 AM - 7:00 PM',
+      tuesday: '8:00 AM - 7:00 PM',
+      wednesday: '8:00 AM - 7:00 PM',
+      thursday: '8:00 AM - 7:00 PM',
+      friday: '8:00 AM - 7:00 PM',
+      saturday: '8:00 AM - 7:00 PM',
+      sunday: '8:00 AM - 7:00 PM'
+    },
+    phone: '',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Paved pathways', 'Accessible seating'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'BMICH (Bandaranaike Memorial International Conference Hall)',
+    category: 'government',
+    description: 'A multipurpose conference and exhibition hall, often used for national and international events.',
+    address: 'Bauddhaloka Mawatha, Colombo 7, Sri Lanka',
+    latitude: 6.9263,
+    longitude: 79.9702,
+    opening_hours: {
+      monday: '9:00 AM - 5:00 PM',
+      tuesday: '9:00 AM - 5:00 PM',
+      wednesday: '9:00 AM - 5:00 PM',
+      thursday: '9:00 AM - 5:00 PM',
+      friday: '9:00 AM - 5:00 PM',
+      saturday: '9:00 AM - 5:00 PM',
+      sunday: 'Closed'
+    },
+    phone: '+94 11 269 0111',
+    website: 'https://www.bmich.lk',
+    accessibility_features: ['Wheelchair accessible entrance', 'Accessible parking', 'Elevator access'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Cinnamon Grand Colombo',
+    category: 'hotels',
+    description: 'Luxury hotel offering world-class amenities and dining options.',
+    address: '77 Galle Road, Colombo 3, Sri Lanka',
+    latitude: 6.9279,
+    longitude: 79.8543,
+    opening_hours: {
+      monday: '24 hours',
+      tuesday: '24 hours',
+      wednesday: '24 hours',
+      thursday: '24 hours',
+      friday: '24 hours',
+      saturday: '24 hours',
+      sunday: '24 hours'
+    },
+    phone: '+94 11 243 7437',
+    website: 'https://www.cinnamonhotels.com/cinnamon-grand-colombo',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible rooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Ministry of Crab',
+    category: 'restaurants',
+    description: 'A renowned seafood restaurant specializing in Sri Lankan crabs, co-founded by cricket legends Mahela Jayawardene and Kumar Sangakkara.',
+    address: 'Dutch Hospital, Colombo 01, Sri Lanka',
+    latitude: 6.9330,
+    longitude: 79.8480,
+    opening_hours: {
+      monday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      tuesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      wednesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      thursday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      friday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      saturday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      sunday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM'
+    },
+    phone: '+94 11 234 5727',
+    website: 'https://www.ministryofcrab.com',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Nihonbashi',
+    category: 'restaurants',
+    description: 'An upscale Japanese restaurant offering authentic sushi and sashimi, known for its elegant ambiance and quality.',
+    address: 'Galle Face Terrace, Colombo 03, Sri Lanka',
+    latitude: 6.9275,
+    longitude: 79.8555,
+    opening_hours: {
+      monday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      tuesday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      wednesday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      thursday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      friday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      saturday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM',
+      sunday: '12:00 PM - 2:30 PM, 6:30 PM - 10:30 PM'
+    },
+    phone: '+94 11 244 5555',
+    website: 'https://www.nihonbashi.lk',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'The Gallery Café',
+    category: 'restaurants',
+    description: 'A chic café offering a fusion of Sri Lankan and international cuisines, set in a beautifully restored colonial building.',
+    address: '2 Alfred House Road, Colombo 03, Sri Lanka',
+    latitude: 6.9270,
+    longitude: 79.8565,
+    opening_hours: {
+      monday: '11:00 AM - 10:00 PM',
+      tuesday: '11:00 AM - 10:00 PM',
+      wednesday: '11:00 AM - 10:00 PM',
+      thursday: '11:00 AM - 10:00 PM',
+      friday: '11:00 AM - 10:00 PM',
+      saturday: '11:00 AM - 10:00 PM',
+      sunday: '11:00 AM - 10:00 PM'
+    },
+    phone: '+94 11 258 2962',
+    website: 'https://www.paradiseroad.lk/gallery-cafe',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'The Lagoon',
+    category: 'restaurants',
+    description: 'A seafood restaurant offering a wide variety of fresh catches, allowing customers to select their own seafood.',
+    address: 'Cinnamon Grand Hotel, Colombo 03, Sri Lanka',
+    latitude: 6.9275,
+    longitude: 79.8550,
+    opening_hours: {
+      monday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      tuesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      wednesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      thursday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      friday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      saturday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      sunday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM'
+    },
+    phone: '+94 11 249 7322',
+    website: 'https://www.cinnamonhotels.com/cinnamon-grand-colombo/dining/the-lagoon',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Kaema Sutra',
+    category: 'restaurants',
+    description: 'A contemporary Sri Lankan restaurant offering traditional dishes with a modern twist, co-founded by actress Jacqueline Fernandez.',
+    address: 'Shangri-La Hotel, Colombo, Sri Lanka',
+    latitude: 6.9270,
+    longitude: 79.8550,
+    opening_hours: {
+      monday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      tuesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      wednesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      thursday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      friday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      saturday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      sunday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM'
+    },
+    phone: '+94 11 788 8888',
+    website: 'https://www.shangri-la.com/colombo/shangrila/dining/restaurants/kaema-sutra/',
+    accessibility_features: ['Wheelchair accessible entrance', 'Elevator access', 'Accessible restrooms'],
+    verified: true,
+    images: []
+  },
+  {
+    name: 'Kavuma Restaurant',
+    category: 'restaurants',
+    description: 'A local eatery offering traditional Sri Lankan rice and curry dishes with a homely atmosphere.',
+    address: 'Malabe, Sri Lanka',
+    latitude: 6.9145,
+    longitude: 79.9735,
+    opening_hours: {
+      monday: '10:00 AM - 9:00 PM',
+      tuesday: '10:00 AM - 9:00 PM',
+      wednesday: '10:00 AM - 9:00 PM',
+      thursday: '10:00 AM - 9:00 PM',
+      friday: '10:00 AM - 9:00 PM',
+      saturday: '10:00 AM - 9:00 PM',
+      sunday: '10:00 AM - 9:00 PM'
+    },
+    phone: '+94 11 123 4567',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Accessible seating'],
+    verified: true,
+    images: ['https://www.tripadvisor.com/Restaurant_Review-g11913473-d25391496-Reviews-Kavuma_Restaurant-Malabe_Western_Province.html']
+  },
+  {
+    name: 'Silk Route',
+    category: 'restaurants',
+    description: 'An upscale restaurant offering a fusion of Sri Lankan and international cuisines, known for its rooftop dining experience.',
+    address: 'Renaissance Building, 4th Floor, Kotte Bope Rd, Malabe, Sri Lanka',
+    latitude: 6.9295,
+    longitude: 79.9750,
+    opening_hours: {
+      monday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      tuesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      wednesday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      thursday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      friday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      saturday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM',
+      sunday: '12:00 PM - 3:00 PM, 6:30 PM - 10:30 PM'
+    },
+    phone: '+94 11 554 433',
+    website: '',
+    accessibility_features: ['Elevator access', 'Wheelchair accessible entrance'],
+    verified: true,
+    images: ['https://www.tripadvisor.com/Restaurant_Review-g11913473-d12339388-Reviews-Silk_Route-Malabe_Western_Province.html']
+  },
+  {
+    name: 'Street Kitchen',
+    category: 'restaurants',
+    description: 'A cozy restaurant offering a variety of local and international dishes with a modern twist.',
+    address: '103 Malabe - Kaduwela Rd, Malabe, Sri Lanka',
+    latitude: 6.9310,
+    longitude: 79.9765,
+    opening_hours: {
+      monday: '11:00 AM - 10:00 PM',
+      tuesday: '11:00 AM - 10:00 PM',
+      wednesday: '11:00 AM - 10:00 PM',
+      thursday: '11:00 AM - 10:00 PM',
+      friday: '11:00 AM - 10:00 PM',
+      saturday: '11:00 AM - 10:00 PM',
+      sunday: '11:00 AM - 10:00 PM'
+    },
+    phone: '+94 11 234 5678',
+    website: '',
+    accessibility_features: ['Wheelchair accessible entrance', 'Accessible seating'],
+    verified: true,
+    images: ['https://www.srilanka-places.com/places/street-kitchen-malabe']
+>>>>>>> Stashed changes
   }
 ]
 

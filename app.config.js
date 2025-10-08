@@ -5,6 +5,7 @@ export default {
     version: "1.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
+    scheme: "accesslanka",
     splash: {
       resizeMode: "contain",
       backgroundColor: "#2E7D32"
@@ -16,7 +17,20 @@ export default {
       bundleIdentifier: "com.accesslanka.app"
     },
     android: {
-      package: "com.accesslanka.app"
+      package: "com.accesslanka.app",
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [
+            {
+              scheme: "accesslanka",
+              host: "*"
+            }
+          ],
+          category: ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     web: {},
     plugins: [

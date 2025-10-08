@@ -131,7 +131,9 @@ export default function LandingScreen({ navigation }) {
           >
             <View style={styles.logoContainer}>
               <Surface style={styles.logoSurface} elevation={4}>
-                <Icon name="wheelchair-accessibility" size={40} color="#2E7D32" />
+                <View style={styles.logoWrapper}>
+                  <Icon name="wheelchair-accessibility" size={40} color="#2E7D32" />
+                </View>
               </Surface>
               <Text variant="headlineLarge" style={styles.appName}>
                 AccessLanka
@@ -213,7 +215,9 @@ export default function LandingScreen({ navigation }) {
                       ]}
                       elevation={2}
                     >
-                      <Icon name={feature.icon} size={32} color={feature.color} />
+                      <View style={styles.iconWrapper}>
+                        <Icon name={feature.icon} size={32} color={feature.color} />
+                      </View>
                     </Surface>
                     
                     <Text variant="titleLarge" style={styles.featureTitle}>
@@ -248,22 +252,24 @@ export default function LandingScreen({ navigation }) {
 
         {/* Stats Section */}
         <Surface style={styles.statsSection} elevation={4}>
-          <Text variant="headlineMedium" style={styles.sectionTitle}>
-            Trusted by Community
-          </Text>
-          
-          <View style={styles.statsContainer}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statItem}>
-                <Icon name={stat.icon} size={24} color="#2E7D32" />
-                <Text variant="headlineSmall" style={styles.statNumber}>
-                  {stat.number}
-                </Text>
-                <Text variant="bodySmall" style={styles.statLabel}>
-                  {stat.label}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.statsWrapper}>
+            <Text variant="headlineMedium" style={styles.sectionTitle}>
+              Trusted by Community
+            </Text>
+            
+            <View style={styles.statsContainer}>
+              {stats.map((stat, index) => (
+                <View key={index} style={styles.statItem}>
+                  <Icon name={stat.icon} size={24} color="#2E7D32" />
+                  <Text variant="headlineSmall" style={styles.statNumber}>
+                    {stat.number}
+                  </Text>
+                  <Text variant="bodySmall" style={styles.statLabel}>
+                    {stat.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         </Surface>
 
@@ -365,10 +371,16 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "white",
     marginBottom: 16,
+  },
+  logoWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
   },
   appName: {
     color: "white",
@@ -450,9 +462,15 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
+    marginBottom: 16,
+  },
+  iconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    overflow: "hidden",
   },
   featureTitle: {
     color: "#2E7D32",
@@ -478,9 +496,13 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     margin: 20,
-    padding: 24,
     backgroundColor: "white",
     borderRadius: 16,
+  },
+  statsWrapper: {
+    padding: 24,
+    borderRadius: 16,
+    overflow: "hidden",
   },
   statsContainer: {
     flexDirection: "row",

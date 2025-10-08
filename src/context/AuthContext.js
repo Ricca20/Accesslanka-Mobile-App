@@ -135,6 +135,16 @@ export const AuthProvider = ({ children }) => {
     setSession(null)
   }
 
+  const resetPassword = async (email) => {
+    const result = await DatabaseService.resetPassword(email)
+    return result
+  }
+
+  const updatePassword = async (newPassword) => {
+    const result = await DatabaseService.updatePassword(newPassword)
+    return result
+  }
+
   const updateProfile = async (updates) => {
     if (!user) throw new Error('No user logged in')
     
@@ -168,6 +178,8 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
     updateProfile,
     refreshUserProfile,
     isAuthenticated: !!user,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { View, StyleSheet, Dimensions, Alert, TouchableOpacity, Platform } from "react-native"
-import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator } from "react-native-paper"
+import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator, FAB } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps"
 import * as Location from 'expo-location'
@@ -542,6 +542,15 @@ export default function ExploreScreen({ navigation }) {
           ))}
         </MapView>
       </View>
+      
+      {/* Floating AI Assistant Button */}
+      <FAB
+        icon="robot"
+        style={styles.fab}
+        onPress={() => navigation.navigate('Chatbot')}
+        label="AI Assistant"
+        color="#FFFFFF"
+      />
     </SafeAreaView>
   )
 }
@@ -598,5 +607,12 @@ const styles = StyleSheet.create({
   },
   selectedMarker: {
     transform: [{ scale: 1.2 }],
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#2E7D32',
   },
 })
