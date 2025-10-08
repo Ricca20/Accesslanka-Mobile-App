@@ -13,18 +13,10 @@ export default {
     assetBundlePatterns: ["**/*"],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.accesslanka.app",
-      config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-      }
+      bundleIdentifier: "com.accesslanka.app"
     },
     android: {
-      package: "com.accesslanka.app",
-      config: {
-        googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-        }
-      }
+      package: "com.accesslanka.app"
     },
     web: {},
     plugins: [
@@ -36,9 +28,6 @@ export default {
           locationAlwaysAndWhenInUsePermission: "Allow AccessLanka to use your location to show nearby accessible places."
         }
       ]
-    ],
-    extra: {
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
-    }
+    ]
   }
 }

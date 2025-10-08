@@ -1,8 +1,9 @@
-import { useState, useRef } from "react"
-import { View, StyleSheet, ScrollView, Dimensions, Image, FlatList, TouchableOpacity } from "react-native"
-import { Text, Card, Button, Chip, Divider, Badge } from "react-native-paper"
+import { useState, useRef, useEffect } from "react"
+import { View, StyleSheet, ScrollView, Dimensions, Image, FlatList, TouchableOpacity, Linking, Alert } from "react-native"
+import { Text, Card, Button, Chip, Divider, Badge, ActivityIndicator } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
+import { DatabaseService } from "../lib/database"
 
 const { width } = Dimensions.get("window")
 const IMAGE_WIDTH = width
@@ -12,10 +13,33 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
   const { place } = route.params
   const [isFavorite, setIsFavorite] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [reviews, setReviews] = useState([])
+  const [loadingReviews, setLoadingReviews] = useState(true)
   const flatListRef = useRef(null)
 
-  // Mock data if no place is provided
-  const placeData = place || {
+  // Debug: Log the received place data
+  console.log('PlaceDetailsScreen received place data:', JSON.stringify(place, null, 2))
+
+  // Process place data from database
+  const placeData = place ? {
+    ...place,
+    rating: place.rating || 4.0,
+    accessibilityRating: place.accessibility_rating || 4.0,
+    // Handle accessibility_features as ARRAY (from database) or features (from normalized data)
+    features: place.accessibility_features 
+      ? (Array.isArray(place.accessibility_features) 
+          ? place.accessibility_features  // Already an array from database
+          : Object.entries(place.accessibility_features)
+              .filter(([key, value]) => value === true)
+              .map(([key]) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())))
+      : (place.features || []),  // Use features from normalized data
+    // Handle images/photos
+    images: place.images || place.photos || [],
+    verified: place.verified || false,
+    openingHours: place.opening_hours ? formatOpeningHours(place.opening_hours) : "Hours not available",
+    contact: place.phone || "Phone not available",
+    website: place.website || "Website not available",
+  } : {
     id: 1,
     name: "Colombo National Museum",
     rating: 4.2,
@@ -34,6 +58,54 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
     openingHours: "Daily 9:00 AM - 5:00 PM",
     contact: "+94 11 269 4767",
     website: "www.museum.gov.lk",
+  }
+
+  // Debug: Log processed placeData
+  console.log('Processed placeData:', {
+    name: placeData.name,
+    openingHours: placeData.openingHours,
+    contact: placeData.contact,
+    website: placeData.website,
+    features: placeData.features,
+    images: placeData.images,
+  })
+
+  // Fetch reviews for this place
+  useEffect(() => {
+    fetchReviews()
+  }, [place.id])
+
+  const fetchReviews = async () => {
+    try {
+      setLoadingReviews(true)
+      const reviewsData = await DatabaseService.getReviews({ placeId: place.id })
+      setReviews(reviewsData || [])
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+    } finally {
+      setLoadingReviews(false)
+    }
+  }
+
+  // Format opening hours from database structure
+  function formatOpeningHours(hours) {
+    if (typeof hours === 'string') return hours
+    if (typeof hours === 'object' && hours !== null) {
+      // Handle JSONB format like: {"monday": "9:00 AM - 5:00 PM", "tuesday": "9:00 AM - 5:00 PM"}
+      const days = Object.keys(hours)
+      if (days.length > 0) {
+        const firstDay = days[0]
+        const firstHours = hours[firstDay]
+        // Check if all days have same hours
+        const allSame = days.every(day => hours[day] === firstHours)
+        if (allSame) {
+          return `Daily: ${firstHours}`
+        } else {
+          return days.map(day => `${day.charAt(0).toUpperCase() + day.slice(1)}: ${hours[day]}`).join('\n')
+        }
+      }
+    }
+    return "Hours not available"
   }
 
   const renderStars = (rating) => {
@@ -92,6 +164,93 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
       />
     </View>
   )
+
+  // Render review card
+  const renderReview = (review) => {
+    const formatDate = (dateString) => {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    }
+
+    return (
+      <Card key={review.id} style={styles.reviewCard}>
+        <Card.Content>
+          {/* Review Header */}
+          <View style={styles.reviewHeader}>
+            <View style={styles.reviewUserInfo}>
+              <Text variant="titleSmall" style={styles.reviewUserName}>
+                {review.user?.full_name || 'Anonymous User'}
+              </Text>
+              {review.user?.verified && (
+                <Icon name="check-decagram" size={16} color="#2E7D32" />
+              )}
+            </View>
+            <Text variant="bodySmall" style={styles.reviewDate}>
+              {formatDate(review.created_at)}
+            </Text>
+          </View>
+
+          {/* Overall Rating */}
+          <View style={styles.reviewRating}>
+            <View style={styles.starsContainer}>
+              {renderStars(review.overall_rating)}
+            </View>
+            <Text variant="bodySmall" style={styles.ratingText}>
+              {review.overall_rating}/5
+            </Text>
+          </View>
+
+          {/* Review Title */}
+          <Text variant="titleMedium" style={styles.reviewTitle}>
+            {review.title}
+          </Text>
+
+          {/* Review Content */}
+          <Text variant="bodyMedium" style={styles.reviewContent}>
+            {review.content}
+          </Text>
+
+          {/* Accessibility Ratings */}
+          {review.accessibility_ratings && (
+            <View style={styles.reviewAccessibilityRatings}>
+              {Object.entries(review.accessibility_ratings).map(([category, rating]) => {
+                if (rating > 0) {
+                  const icons = {
+                    mobility: 'wheelchair-accessibility',
+                    visual: 'eye',
+                    hearing: 'ear-hearing',
+                    cognitive: 'brain',
+                  }
+                  return (
+                    <Chip key={category} style={styles.accessibilityChip} compact>
+                      <Icon name={icons[category]} size={14} color="#2E7D32" />
+                      {` ${category}: ${rating}/5`}
+                    </Chip>
+                  )
+                }
+                return null
+              })}
+            </View>
+          )}
+
+          {/* Helpful Button */}
+          <View style={styles.reviewActions}>
+            <Button
+              mode="text"
+              icon="thumb-up-outline"
+              compact
+              onPress={() => {
+                // TODO: Implement helpful functionality
+                Alert.alert("Coming Soon", "Mark as helpful feature coming soon!")
+              }}
+            >
+              Helpful ({review.helpful_count || 0})
+            </Button>
+          </View>
+        </Card.Content>
+      </Card>
+    )
+  }
 
   // Determine wheelchair accessibility status
   const getAccessibilityStatus = () => {
@@ -164,7 +323,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
               <Icon 
                 name="wheelchair-accessibility" 
                 size={20} 
-                color={accessibilityStatus === 'yes' ? '#2E7D32' : accessibilityStatus === 'partial' ? '#FF9800' : '#666'} 
+                color={accessibilityStatus === 'yes' ? '#ffffffff' : accessibilityStatus === 'partial' ? '#FF9800' : '#666'} 
               />
               <Text style={[
                 styles.wheelchairText,
@@ -333,37 +492,99 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                   {placeData.openingHours}
                 </Text>
               </View>
-              <View style={styles.infoItem}>
-                <Icon name="phone" size={20} color="#666" />
-                <Text variant="bodyMedium" style={styles.infoText}>
-                  {placeData.contact}
-                </Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Icon name="web" size={20} color="#666" />
-                <Text variant="bodyMedium" style={styles.infoText}>
-                  {placeData.website}
-                </Text>
-              </View>
+              
+              {placeData.contact && placeData.contact !== "Phone not available" && (
+                <TouchableOpacity 
+                  style={styles.infoItem}
+                  onPress={() => {
+                    const phoneUrl = `tel:${placeData.contact.replace(/\s/g, '')}`
+                    Linking.openURL(phoneUrl)
+                  }}
+                >
+                  <Icon name="phone" size={20} color="#2E7D32" />
+                  <Text variant="bodyMedium" style={[styles.infoText, styles.linkText]}>
+                    {placeData.contact}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              {placeData.website && placeData.website !== "Website not available" && (
+                <TouchableOpacity 
+                  style={styles.infoItem}
+                  onPress={() => {
+                    const websiteUrl = placeData.website.startsWith('http') 
+                      ? placeData.website 
+                      : `https://${placeData.website}`
+                    Linking.openURL(websiteUrl)
+                  }}
+                >
+                  <Icon name="web" size={20} color="#2E7D32" />
+                  <Text variant="bodyMedium" style={[styles.infoText, styles.linkText]}>
+                    {placeData.website}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* Reviews Section */}
+          <View style={styles.section}>
+            <View style={styles.reviewsHeader}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Reviews ({reviews.length})
+              </Text>
+              <Button
+                mode="contained"
+                icon="star-plus"
+                compact
+                onPress={() => navigation.navigate('AddReview', { place: placeData })}
+              >
+                Write Review
+              </Button>
+            </View>
+
+            {loadingReviews ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2E7D32" />
+                <Text style={styles.loadingText}>Loading reviews...</Text>
+              </View>
+            ) : reviews.length > 0 ? (
+              <View style={styles.reviewsList}>
+                {reviews.map(review => renderReview(review))}
+              </View>
+            ) : (
+              <View style={styles.emptyReviews}>
+                <Icon name="comment-text-outline" size={48} color="#CCCCCC" />
+                <Text variant="titleMedium" style={styles.emptyReviewsTitle}>
+                  No reviews yet
+                </Text>
+                <Text variant="bodyMedium" style={styles.emptyReviewsText}>
+                  Be the first to share your experience!
+                </Text>
+                <Button
+                  mode="contained"
+                  icon="star-plus"
+                  style={styles.emptyReviewsButton}
+                  onPress={() => navigation.navigate('AddReview', { place: placeData })}
+                >
+                  Write First Review
+                </Button>
+              </View>
+            )}
           </View>
 
           {/* Action Buttons */}
           <View style={styles.actionSection}>
             <Button
-              mode="contained"
-              icon="star-plus"
-              style={styles.actionButton}
-              onPress={() => {}}
-              accessibilityLabel="Add review for this place"
-            >
-              Add Review
-            </Button>
-            <Button
               mode="outlined"
               icon="flag"
               style={styles.actionButton}
-              onPress={() => {}}
+              onPress={() => {
+                // TODO: Implement report issue functionality
+                Alert.alert("Report Issue", "This feature is coming soon!")
+              }}
               accessibilityLabel="Report issue with this place"
             >
               Report Issue
@@ -440,7 +661,7 @@ const styles = StyleSheet.create({
   wheelchairBadgeYes: {
     backgroundColor: 'rgba(76, 175, 80, 0.15)',
     borderWidth: 1,
-    borderColor: '#2E7D32',
+    borderColor: '#ffffffff',
   },
   wheelchairBadgePartial: {
     backgroundColor: 'rgba(255, 152, 0, 0.15)',
@@ -456,7 +677,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   wheelchairTextYes: {
-    color: '#2E7D32',
+    color: '#ffffffff',
   },
   wheelchairTextPartial: {
     color: '#FF9800',
@@ -614,6 +835,10 @@ const styles = StyleSheet.create({
     color: "#666",
     flex: 1,
   },
+  linkText: {
+    color: "#2E7D32",
+    textDecorationLine: "underline",
+  },
   actionSection: {
     flexDirection: "row",
     gap: 12,
@@ -622,5 +847,92 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     paddingVertical: 8,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  reviewsList: {
+    gap: 12,
+  },
+  reviewCard: {
+    marginBottom: 12,
+    elevation: 2,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reviewUserName: {
+    fontWeight: 'bold',
+  },
+  reviewDate: {
+    color: '#999',
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  reviewTitle: {
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  reviewContent: {
+    color: '#666',
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  reviewAccessibilityRatings: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  accessibilityChip: {
+    backgroundColor: '#E8F5E8',
+    height: 28,
+  },
+  reviewActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 8,
+  },
+  emptyReviews: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 8,
+  },
+  emptyReviewsTitle: {
+    marginTop: 12,
+    marginBottom: 4,
+    color: '#666',
+  },
+  emptyReviewsText: {
+    color: '#999',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  emptyReviewsButton: {
+    backgroundColor: '#2E7D32',
+  },
+  loadingContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
   },
 })

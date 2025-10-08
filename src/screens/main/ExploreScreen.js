@@ -1,17 +1,21 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { View, StyleSheet, Dimensions, Alert, TouchableOpacity, Platform } from "react-native"
-import { Searchbar, FAB, Card, Text, Chip, Button, List, Divider, ActivityIndicator } from "react-native-paper"
+import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps"
-import MapViewDirections from 'react-native-maps-directions'
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps"
 import * as Location from 'expo-location'
-import Constants from 'expo-constants'
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../../lib/database"
-import { GooglePlacesService } from "../../services/GooglePlacesService"
+import { DatabasePlacesService } from "../../services/DatabasePlacesService"
 
 const { width, height } = Dimensions.get("window")
-const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+// Malabe area coordinates (center of Malabe, Sri Lanka)
+const MALABE_CENTER = {
+  latitude: 6.9063,
+  longitude: 79.9738,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+}
 
 export default function ExploreScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -22,30 +26,22 @@ export default function ExploreScreen({ navigation }) {
   const [loading, setLoading] = useState(true)
   const [userLocation, setUserLocation] = useState(null)
   const [selectedPlace, setSelectedPlace] = useState(null)
-  const [showDirections, setShowDirections] = useState(false)
   const [searchHistory, setSearchHistory] = useState([])
   const [showNearbyPlaces, setShowNearbyPlaces] = useState(false)
-  const [googlePlaces, setGooglePlaces] = useState([])
   const [isSearching, setIsSearching] = useState(false)
+  const [region, setRegion] = useState(MALABE_CENTER)
   const mapRef = useRef(null)
   const searchTimeoutRef = useRef(null)
-  
-  const [region, setRegion] = useState({
-    latitude: 6.9271,
-    longitude: 79.8612,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  })
 
   const categories = [
     { key: "all", label: "All", icon: "view-list" },
-    { key: "museum", label: "Museums", icon: "bank" },
-    { key: "park", label: "Parks", icon: "tree" },
-    { key: "monument", label: "Monuments", icon: "flag" },
+    { key: "education", label: "Education", icon: "school" },
+    { key: "parks", label: "Parks", icon: "tree" },
     { key: "restaurants", label: "Restaurants", icon: "silverware-fork-knife" },
-    { key: "hotels", label: "Hotels", icon: "bed" },
-    { key: "temple", label: "Temples", icon: "church" },
     { key: "shopping", label: "Shopping", icon: "shopping" },
+    { key: "healthcare", label: "Healthcare", icon: "hospital-box" },
+    { key: "temple", label: "Religious", icon: "church" },
+    { key: "government", label: "Services", icon: "city" },
   ]
 
   // Request location permissions and get user location
@@ -109,8 +105,15 @@ export default function ExploreScreen({ navigation }) {
           address: p.address,
           latitude: parseFloat(p.latitude),
           longitude: parseFloat(p.longitude),
+          accessibility_features: p.accessibility_features || [],
           features: p.accessibility_features || [],
           images: p.images || [],
+          photos: p.images || [],
+          phone: p.phone || null,
+          website: p.website || null,
+          opening_hours: p.opening_hours || null,
+          rating: p.rating || 4.0,
+          accessibility_rating: p.accessibility_rating || 4.0,
           type: 'place',
           verified: p.verified,
         })),
@@ -122,10 +125,15 @@ export default function ExploreScreen({ navigation }) {
           address: b.address,
           latitude: parseFloat(b.latitude),
           longitude: parseFloat(b.longitude),
+          accessibility_features: b.accessibility_features || [],
           features: b.accessibility_features || [],
           images: b.images || [],
-          phone: b.phone,
-          website: b.website,
+          photos: b.images || [],
+          phone: b.phone || null,
+          website: b.website || null,
+          opening_hours: b.opening_hours || null,
+          rating: b.rating || 4.0,
+          accessibility_rating: b.accessibility_rating || 4.0,
           type: 'business',
           verified: b.verified,
         }))
@@ -159,25 +167,12 @@ export default function ExploreScreen({ navigation }) {
     const query = searchQuery.toLowerCase()
     const suggestions = []
     
-    // Add Google Places results FIRST (real-world search)
-    if (googlePlaces.length > 0) {
-      googlePlaces.slice(0, 5).forEach(place => {
-        suggestions.push({
-          type: 'google_place',
-          text: place.name,
-          subtitle: place.address,
-          icon: 'earth',
-          data: place
-        })
-      })
-    }
-    
     // Add quick actions
     if ('nearby'.includes(query) || 'near me'.includes(query)) {
       suggestions.push({
         type: 'action',
         text: 'Search Nearby',
-        subtitle: 'Find accessible places near you',
+        subtitle: 'Find accessible places near you in Malabe',
         icon: 'crosshairs-gps',
         data: 'nearby'
       })
@@ -232,7 +227,7 @@ export default function ExploreScreen({ navigation }) {
     })
     
     return suggestions.slice(0, 10)
-  }, [searchQuery, places, searchHistory, categories, googlePlaces])
+  }, [searchQuery, places, searchHistory, categories])
 
   // Filter places based on search query and category
   const filteredPlaces = useMemo(() => {
@@ -257,43 +252,7 @@ export default function ExploreScreen({ navigation }) {
     return filteredList
   }, [searchQuery, selectedCategory, places])
 
-  // Search Google Places API
-  useEffect(() => {
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    // Only search if query is long enough
-    if (searchQuery.trim().length >= 3) {
-      setIsSearching(true)
-      
-      // Debounce API calls
-      searchTimeoutRef.current = setTimeout(async () => {
-        try {
-          const results = await GooglePlacesService.searchPlaces(
-            searchQuery,
-            userLocation,
-            50000 // 50km radius
-          )
-          setGooglePlaces(results)
-        } catch (error) {
-          console.error('Error searching Google Places:', error)
-        } finally {
-          setIsSearching(false)
-        }
-      }, 500) // 500ms debounce
-    } else {
-      setGooglePlaces([])
-      setIsSearching(false)
-    }
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [searchQuery, userLocation])
+  // No longer using Google Places API - all searches are from local database
 
   // Handle search input
   const handleSearchChange = (query) => {
@@ -311,42 +270,10 @@ export default function ExploreScreen({ navigation }) {
       setSearchHistory([suggestion.text, ...searchHistory.slice(0, 9)])
     }
     
-    if (suggestion.type === 'google_place') {
-      // Handle Google Place selection
-      setIsSearching(true)
-      try {
-        const placeDetails = await GooglePlacesService.getPlaceDetails(suggestion.data.placeId)
-        if (placeDetails && typeof placeDetails === 'object') {
-          setSearchQuery(placeDetails.name)
-          setShowSearchResults(true)
-          
-          // Create a place object compatible with our system
-          const googlePlace = {
-            ...placeDetails,
-            id: placeDetails.placeId,
-            features: placeDetails.wheelchairAccessible ? ['Wheelchair Accessible'] : [],
-            verified: false, // Google places are not verified by us
-            isGooglePlace: true
-          }
-          
-          focusOnPlace(googlePlace)
-          setSelectedPlace(googlePlace)
-        } else {
-          Alert.alert('Error', 'Invalid place data received. Please try another place.')
-        }
-      } catch (error) {
-        console.error('Error getting place details:', error)
-        Alert.alert('Error', 'Could not load place details. Please try again.')
-      } finally {
-        setIsSearching(false)
-      }
-    } else if (suggestion.type === 'place') {
-      // Focus on specific place from our database
+    if (suggestion.type === 'place') {
+      // Navigate to place details screen
       const place = suggestion.data
-      setSearchQuery(place.name)
-      setShowSearchResults(true)
-      focusOnPlace(place)
-      setSelectedPlace(place)
+      navigation.navigate('PlaceDetails', { place })
     } else if (suggestion.type === 'category') {
       // Filter by category
       setSelectedCategory(suggestion.data)
@@ -363,23 +290,27 @@ export default function ExploreScreen({ navigation }) {
     }
   }
 
+  // Select a specific place
+  const selectPlace = (place) => {
+    setSelectedPlace(place)
+  }
+
   // Focus map on a specific place
   const focusOnPlace = (place) => {
-    setRegion({
-      latitude: place.latitude,
-      longitude: place.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    })
-    
-    if (mapRef.current) {
+    if (mapRef.current && place.latitude && place.longitude) {
       mapRef.current.animateToRegion({
-        latitude: place.latitude,
-        longitude: place.longitude,
+        latitude: parseFloat(place.latitude),
+        longitude: parseFloat(place.longitude),
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       }, 1000)
+      setSelectedPlace(place)
     }
+  }
+
+  // Handle marker press - navigate to details screen
+  const handleMarkerPress = (place) => {
+    navigation.navigate('PlaceDetails', { place })
   }
 
   // Handle search submit
@@ -394,26 +325,7 @@ export default function ExploreScreen({ navigation }) {
           `No places found for "${searchQuery}". Try a different search term.`,
           [{ text: "OK" }]
         )
-      } else if (filteredPlaces.length === 1) {
-        focusOnPlace(filteredPlaces[0])
-      } else {
-        fitMarkersToMap(filteredPlaces)
       }
-    }
-  }
-
-  // Fit multiple markers in map view
-  const fitMarkersToMap = (placesToFit) => {
-    if (placesToFit.length > 1 && mapRef.current) {
-      const coordinates = placesToFit.map(p => ({
-        latitude: p.latitude,
-        longitude: p.longitude,
-      }))
-      
-      mapRef.current.fitToCoordinates(coordinates, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true,
-      })
     }
   }
 
@@ -472,89 +384,74 @@ export default function ExploreScreen({ navigation }) {
     setShowSuggestions(false)
     setShowNearbyPlaces(false)
     setSelectedCategory("all")
-    setShowDirections(false)
     setSelectedPlace(null)
   }
 
-  // Handle marker press
-  const onMarkerPress = (place) => {
-    setSelectedPlace(place)
-    focusOnPlace(place)
+  // Get category icon
+  const getCategoryIcon = (category) => {
+    const categoryItem = categories.find(c => c.key === category)
+    return categoryItem?.icon || 'map-marker'
   }
-
-  // Show directions to selected place
-  const handleShowDirections = () => {
-    if (!userLocation) {
-      Alert.alert(
-        'Location Required',
-        'Please enable location services to get directions.',
-        [{ text: 'OK' }]
-      )
-      return
-    }
-    
-    if (!selectedPlace) {
-      Alert.alert('No Place Selected', 'Please select a place first.')
-      return
-    }
-    
-    setShowDirections(true)
-    
-    // Fit both user location and destination in view
-    if (mapRef.current) {
-      mapRef.current.fitToCoordinates(
-        [userLocation, { latitude: selectedPlace.latitude, longitude: selectedPlace.longitude }],
-        {
-          edgePadding: { top: 100, right: 50, bottom: 300, left: 50 },
-          animated: true,
-        }
-      )
-    }
-  }
-
-  // Get marker color based on category
-  const getMarkerColor = (category) => {
+  
+  // Get category color based on category
+  const getCategoryColor = (category) => {
     const colors = {
-      museum: '#9C27B0',
-      park: '#4CAF50',
-      monument: '#FF5722',
+      education: '#3F51B5',
+      parks: '#4CAF50',
       restaurants: '#FF9800',
-      hotels: '#2196F3',
-      temple: '#795548',
       shopping: '#E91E63',
+      healthcare: '#F44336',
+      temple: '#795548',
+      government: '#607D8B',
     }
     return colors[category] || '#2E7D32'
   }
-
-  // Custom marker component
-  const renderMarker = (place) => {
-    const isSelected = selectedPlace?.id === place.id
-    const color = getMarkerColor(place.category)
+  
+  // Render a place card
+  const renderPlaceCard = (place) => {
+    const categoryColor = getCategoryColor(place.category)
     
     return (
-      <Marker
+      <Card
         key={place.id}
-        coordinate={{
-          latitude: place.latitude,
-          longitude: place.longitude,
-        }}
-        title={place.name}
-        description={place.address}
-        onPress={() => onMarkerPress(place)}
-        pinColor={color}
+        style={styles.placeCard}
+        onPress={() => navigation.navigate("PlaceDetails", { place })}
       >
-        <View style={[
-          styles.customMarker,
-          isSelected && styles.selectedMarker,
-          { backgroundColor: color }
-        ]}>
-          <Icon 
-            name="wheelchair-accessibility" 
-            size={isSelected ? 24 : 20} 
-            color="#FFFFFF" 
-          />
-        </View>
-      </Marker>
+        <Card.Content>
+          <View style={styles.placeCardHeader}>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
+              <Icon name={getCategoryIcon(place.category)} size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.placeCardInfo}>
+              <Text variant="titleMedium" style={styles.placeCardTitle}>
+                {place.name}
+              </Text>
+              <Text variant="bodySmall" style={styles.placeCardAddress}>
+                {place.address}
+              </Text>
+              {place.features && place.features.length > 0 && (
+                <View style={styles.featuresContainer}>
+                  <Icon name="wheelchair-accessibility" size={14} color="#2E7D32" />
+                  <Text variant="bodySmall" style={styles.featuresText}>
+                    {place.features.slice(0, 2).join(', ')}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {place.verified && (
+              <Chip
+                mode="flat"
+                style={styles.verifiedChip}
+                textStyle={styles.verifiedChipText}
+                icon="check-decagram"
+                compact
+              >
+                Verified
+              </Chip>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
     )
   }
 
@@ -608,182 +505,43 @@ export default function ExploreScreen({ navigation }) {
             </Card.Content>
           </Card>
         )}
-        
-        {/* Category filters */}
-        <View style={styles.categoryContainer}>
-          {categories.slice(0, 4).map((category) => (
-            <Chip
-              key={category.key}
-              selected={selectedCategory === category.key}
-              onPress={() => setSelectedCategory(category.key)}
-              style={styles.categoryChip}
-              icon={category.icon}
-              compact
-            >
-              {category.label}
-            </Chip>
-          ))}
-        </View>
-        
-        {/* Search results info */}
-        {showSearchResults && (
-          <View style={styles.resultsInfo}>
-            <Text variant="bodyMedium" style={styles.resultsText}>
-              {filteredPlaces.length} place{filteredPlaces.length !== 1 ? 's' : ''} found
-              {searchQuery ? ` for "${searchQuery}"` : ''}
-            </Text>
-          </View>
-        )}
       </View>
 
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        region={region}
-        onRegionChangeComplete={setRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        showsCompass={true}
-        showsScale={true}
-        accessibilityLabel="Map showing accessible places"
-        onPress={() => setShowSuggestions(false)}
-      >
-        {/* Render markers */}
-        {filteredPlaces.map((place) => renderMarker(place))}
-        
-        {/* Show directions */}
-        {showDirections && selectedPlace && userLocation && GOOGLE_MAPS_API_KEY && (
-          <MapViewDirections
-            origin={userLocation}
-            destination={{
-              latitude: selectedPlace.latitude,
-              longitude: selectedPlace.longitude,
-            }}
-            apikey={GOOGLE_MAPS_API_KEY}
-            strokeWidth={4}
-            strokeColor="#2E7D32"
-            optimizeWaypoints={true}
-            onStart={(params) => {
-              console.log(`Started routing between "${params.origin}" and "${params.destination}"`)
-            }}
-            onReady={result => {
-              console.log(`Distance: ${result.distance} km`)
-              console.log(`Duration: ${result.duration} min.`)
-            }}
-            onError={(errorMessage) => {
-              console.error('Directions error:', errorMessage)
-              Alert.alert('Directions Error', 'Unable to get directions. Please try again.')
-            }}
-          />
-        )}
-      </MapView>
-
-      {/* Selected place info card */}
-      {selectedPlace && (
-        <Card style={styles.placeInfoCard}>
-          <Card.Content>
-            <View style={styles.placeInfoHeader}>
-              <View style={styles.placeInfoText}>
-                <View style={styles.placeNameRow}>
-                  <Text variant="titleMedium" style={styles.placeName}>
-                    {selectedPlace.name}
-                  </Text>
-                  {selectedPlace.isGooglePlace && (
-                    <Chip
-                      mode="flat"
-                      style={styles.googleChip}
-                      textStyle={styles.googleChipText}
-                      icon="earth"
-                      compact
-                    >
-                      Google
-                    </Chip>
-                  )}
-                  {selectedPlace.verified && !selectedPlace.isGooglePlace && (
-                    <Chip
-                      mode="flat"
-                      style={styles.verifiedChip}
-                      textStyle={styles.verifiedChipText}
-                      icon="check-decagram"
-                      compact
-                    >
-                      Verified
-                    </Chip>
-                  )}
-                </View>
-                <Text variant="bodySmall" style={styles.placeAddress}>
-                  {selectedPlace.address}
-                </Text>
-                {selectedPlace.rating > 0 && (
-                  <Text variant="bodySmall" style={styles.placeRating}>
-                    ⭐ {selectedPlace.rating.toFixed(1)}
-                  </Text>
-                )}
-                {selectedPlace.features && selectedPlace.features.length > 0 && (
-                  <Text variant="bodySmall" style={styles.placeFeatures}>
-                    {selectedPlace.features.slice(0, 2).join(', ')}
-                  </Text>
-                )}
+      {/* Map View */}
+      <View style={styles.mapContainer}>
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          initialRegion={region}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+        >
+          {/* Render markers for all places */}
+          {filteredPlaces.map((place) => (
+            <Marker
+              key={place.id}
+              coordinate={{
+                latitude: parseFloat(place.latitude),
+                longitude: parseFloat(place.longitude),
+              }}
+              title={place.name}
+              description={`${place.address} - Tap to view details`}
+              onPress={() => handleMarkerPress(place)}
+            >
+              <View style={[
+                styles.markerContainer,
+                selectedPlace?.id === place.id && styles.selectedMarker
+              ]}>
+                <Icon 
+                  name={place.accessibility_features?.wheelchair_accessible ? "wheelchair-accessibility" : "map-marker"}
+                  size={30}
+                  color={selectedPlace?.id === place.id ? "#2E7D32" : "#1976D2"}
+                />
               </View>
-              <TouchableOpacity onPress={() => setSelectedPlace(null)}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.placeInfoActions}>
-              {!selectedPlace.isGooglePlace && (
-                <Button
-                  mode="contained"
-                  onPress={() => navigation.navigate("PlaceDetails", { place: selectedPlace })}
-                  style={styles.detailsButton}
-                  icon="information"
-                >
-                  Details
-                </Button>
-              )}
-              {userLocation && (
-                <Button
-                  mode={selectedPlace.isGooglePlace ? "contained" : "outlined"}
-                  onPress={handleShowDirections}
-                  style={styles.directionsButton}
-                  icon="directions"
-                >
-                  Directions
-                </Button>
-              )}
-            </View>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* Nearby Places FAB */}
-      {userLocation && (
-        <FAB 
-          icon="crosshairs-gps" 
-          style={styles.nearbyFab} 
-          onPress={handleNearbySearch} 
-          accessibilityLabel="Find nearby places"
-          size="small"
-          label="Nearby"
-        />
-      )}
-      
-      {/* FAB for adding new place */}
-      <FAB 
-        icon="plus" 
-        style={styles.fab} 
-        onPress={() => navigation.navigate("AddPlace")} 
-        accessibilityLabel="Add new place" 
-      />
-      
-      {/* Refresh FAB */}
-      <FAB 
-        icon="refresh" 
-        style={styles.refreshFab} 
-        onPress={fetchPlaces} 
-        accessibilityLabel="Refresh places"
-        size="small"
-      />
+            </Marker>
+          ))}
+        </MapView>
+      </View>
     </SafeAreaView>
   )
 }
@@ -791,6 +549,7 @@ export default function ExploreScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     flex: 1,
@@ -826,137 +585,18 @@ const styles = StyleSheet.create({
   suggestionItem: {
     paddingVertical: 8,
   },
-  categoryContainer: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
-  },
-  categoryChip: {
-    marginRight: 4,
-  },
-  resultsInfo: {
-    marginTop: 8,
-    paddingVertical: 4,
-  },
-  resultsText: {
-    color: "#666",
-    fontWeight: "500",
+  mapContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   map: {
     flex: 1,
-    width: width,
-    height: height - 250,
   },
-  customMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
+  markerContainer: {
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    justifyContent: 'center',
   },
   selectedMarker: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 4,
-  },
-  placeInfoCard: {
-    position: 'absolute',
-    bottom: 80,
-    left: 16,
-    right: 16,
-    elevation: 8,
-    borderRadius: 12,
-  },
-  placeInfoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  placeInfoText: {
-    flex: 1,
-    marginRight: 8,
-  },
-  placeNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  placeName: {
-    fontWeight: 'bold',
-  },
-  googleChip: {
-    backgroundColor: '#4285F4',
-    height: 24,
-  },
-  googleChipText: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    marginVertical: 0,
-  },
-  verifiedChip: {
-    backgroundColor: '#2E7D32',
-    height: 24,
-  },
-  verifiedChipText: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    marginVertical: 0,
-  },
-  placeAddress: {
-    color: '#666',
-    marginBottom: 4,
-  },
-  placeRating: {
-    color: '#FF9800',
-    marginBottom: 4,
-    fontWeight: 'bold',
-  },
-  placeFeatures: {
-    color: '#2E7D32',
-    fontStyle: 'italic',
-  },
-  placeInfoActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  detailsButton: {
-    flex: 1,
-  },
-  directionsButton: {
-    flex: 1,
-  },
-  nearbyFab: {
-    position: "absolute",
-    margin: 16,
-    right: 0,
-    bottom: 160,
-    backgroundColor: "#FF9800",
-  },
-  fab: {
-    position: "absolute",
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#2E7D32",
-  },
-  refreshFab: {
-    position: "absolute",
-    margin: 16,
-    right: 0,
-    bottom: 80,
-    backgroundColor: "#1976D2",
+    transform: [{ scale: 1.2 }],
   },
 })

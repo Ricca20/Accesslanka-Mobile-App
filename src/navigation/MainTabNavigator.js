@@ -8,6 +8,7 @@ import MapMissionScreen from "../screens/main/MapMissionScreen"
 import BusinessesScreen from "../screens/main/BusinessesScreen"
 import CommunityScreen from "../screens/main/CommunityScreen"
 import PlaceDetailsScreen from "../screens/PlaceDetailsScreen"
+import AddReviewScreen from "../screens/AddReviewScreen"
 import ProfileScreen from "../screens/ProfileScreen"
 import SettingsScreen from "../screens/SettingsScreen"
 import EditProfileScreen from "../screens/EditProfileScreen"
@@ -28,6 +29,7 @@ function ExploreStack() {
     <Stack.Navigator>
       <Stack.Screen name="ExploreMain" component={ExploreScreen} options={{ title: "Explore" }} />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} options={{ title: "Place Details" }} />
+      <Stack.Screen name="AddReview" component={AddReviewScreen} options={{ title: "Write a Review" }} />
     </Stack.Navigator>
   )
 }
