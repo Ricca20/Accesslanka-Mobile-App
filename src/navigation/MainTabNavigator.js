@@ -19,6 +19,7 @@ import MyFavoritesScreen from "../screens/MyFavoritesScreen"
 import AddMyBusinessScreen from "../screens/AddMyBusinessScreen"
 import MyBusinessSubmissionsScreen from "../screens/MyBusinessSubmissionsScreen"
 import CreateMapMissionScreen from "../screens/CreateMapMissionScreen"
+import AccessibilityContributionScreen from "../screens/AccessibilityContributionScreen"
 import DatabaseTestScreen from "../screens/DatabaseTestScreen"
 
 const Tab = createBottomTabNavigator()
@@ -39,6 +40,7 @@ function MapMissionStack() {
     <Stack.Navigator>
       <Stack.Screen name="MapMissionMain" component={MapMissionScreen} options={{ title: "MapMission" }} />
       <Stack.Screen name="CreateMapMission" component={CreateMapMissionScreen} options={{ title: "Create MapMission" }} />
+      <Stack.Screen name="AccessibilityContribution" component={AccessibilityContributionScreen} options={{ title: "Contribute to Mission" }} />
       <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} options={{ title: "Place Details" }} />
     </Stack.Navigator>
   )

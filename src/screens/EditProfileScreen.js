@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ScrollView, Alert } from 'react-native'
-import { Text, TextInput, Button, Card, Divider } from 'react-native-paper'
+import { View, StyleSheet, ScrollView, Alert, Image } from 'react-native'
+import { Text, TextInput, Button, Card, Divider, Avatar, IconButton } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import * as ImagePicker from 'expo-image-picker'
 import { useAuth } from '../context/AuthContext'
+import { DatabaseService } from '../lib/database'
 
 export default function EditProfileScreen({ navigation }) {
   const { user, updateProfile } = useAuth()
@@ -11,6 +13,7 @@ export default function EditProfileScreen({ navigation }) {
     full_name: '',
     location: '',
     accessibility_needs: '',
+    avatar_url: '',
   })
 
   useEffect(() => {
@@ -19,9 +22,77 @@ export default function EditProfileScreen({ navigation }) {
         full_name: user.profile.full_name || user.user_metadata?.full_name || '',
         location: user.profile.location || '',
         accessibility_needs: user.profile.accessibility_needs || '',
+        avatar_url: user.profile.avatar_url || '',
       })
     }
   }, [user])
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera roll permission is required to add photos.')
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio for profile photos
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        setFormData({ ...formData, avatar_url: result.assets[0].uri })
+      }
+    } catch (error) {
+      console.error('Error picking image:', error)
+      Alert.alert('Error', 'Failed to pick image. Please try again.')
+    }
+  }
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required to take photos.')
+        return
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1], // Square aspect ratio for profile photos
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        setFormData({ ...formData, avatar_url: result.assets[0].uri })
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error)
+      Alert.alert('Error', 'Failed to take photo. Please try again.')
+    }
+  }
+
+  const removePhoto = () => {
+    setFormData({ ...formData, avatar_url: '' })
+  }
+
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Select Photo',
+      'Choose how you want to add your profile photo',
+      [
+        { text: 'Camera', onPress: takePhoto },
+        { text: 'Photo Library', onPress: pickImage },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    )
+  }
 
   const handleSave = async () => {
     try {
@@ -64,6 +135,46 @@ export default function EditProfileScreen({ navigation }) {
             <Text variant="bodyMedium" style={styles.subtitle}>
               Update your personal information
             </Text>
+
+            <Divider style={styles.divider} />
+
+            {/* Profile Photo */}
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Profile Photo
+            </Text>
+            
+            <View style={styles.photoContainer}>
+              <View style={styles.avatarContainer}>
+                {formData.avatar_url ? (
+                  <Image source={{ uri: formData.avatar_url }} style={styles.avatarImage} />
+                ) : (
+                  <Avatar.Text 
+                    size={100} 
+                    label={(formData.full_name || user?.email || "U").substring(0, 2).toUpperCase()}
+                    style={styles.avatarPlaceholder}
+                  />
+                )}
+                {formData.avatar_url && (
+                  <IconButton
+                    icon="close-circle"
+                    size={24}
+                    mode="contained"
+                    style={styles.removePhotoButton}
+                    onPress={removePhoto}
+                  />
+                )}
+              </View>
+              <View style={styles.photoButtons}>
+                <Button
+                  mode="outlined"
+                  icon="camera-plus"
+                  onPress={showPhotoOptions}
+                  style={styles.photoButton}
+                >
+                  {formData.avatar_url ? 'Change Photo' : 'Add Photo'}
+                </Button>
+              </View>
+            </View>
 
             <Divider style={styles.divider} />
 
@@ -173,6 +284,41 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#2E7D32',
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  photoContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0f0f0',
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#2E7D32',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+  },
+  photoButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  photoButton: {
+    minWidth: 120,
   },
   inputContainer: {
     marginBottom: 20,

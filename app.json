@@ -27,14 +27,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share business images.",
-          "cameraPermission": "The app accesses your camera to let you take photos of your business."
+          "photosPermission": "The app accesses your photos to let you share accessibility photos during MapMissions.",
+          "cameraPermission": "The app accesses your camera to let you take photos of accessibility features during MapMissions."
         }
       ]
     ],
     "permissions": [
       "CAMERA",
       "CAMERA_ROLL",
+      "WRITE_EXTERNAL_STORAGE",
+      "READ_EXTERNAL_STORAGE",
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION"
     ]

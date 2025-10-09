@@ -4,7 +4,7 @@
 -- Add status column if it doesn't exist
 ALTER TABLE businesses 
 ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending' 
-CHECK (status IN ('pending', 'approved', 'rejected'));
+CHECK (status IN ('pending', 'approved', 'rejected', 'verified'));
 
 -- Create index for status column for better query performance
 CREATE INDEX IF NOT EXISTS idx_businesses_status ON businesses(status);

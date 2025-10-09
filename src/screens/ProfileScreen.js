@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, Alert } from "react-native"
+import { View, StyleSheet, ScrollView, Alert, Image } from "react-native"
 import { Text, Card, Button, Avatar, List, Divider } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
@@ -96,9 +96,44 @@ export default function ProfileScreen({ navigation }) {
     name: userProfile?.full_name || user.user_metadata?.full_name || user.email || "User",
     email: user.email || "No email",
     avatar: (userProfile?.full_name || user.email || "U").substring(0, 2).toUpperCase(),
+    avatar_url: userProfile?.avatar_url || null,
     joinDate: userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently",
     reviewsCount: userStats.reviewsCount,
     favoritesCount: userStats.favoritesCount,
+  }
+
+  const handleSyncBusinessVerification = async () => {
+    try {
+      Alert.alert(
+        'Sync Business Status',
+        'This will update business statuses based on their MapMission status (upcoming→pending, active/completed→verified). Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sync Now',
+            onPress: async () => {
+              try {
+                const result = await DatabaseService.syncBusinessStatusWithMapMissions()
+                Alert.alert(
+                  'Sync Complete',
+                  result.message,
+                  [{ text: 'OK' }]
+                )
+              } catch (error) {
+                console.error('Sync error:', error)
+                Alert.alert(
+                  'Sync Failed',
+                  'Failed to sync business status with MapMissions. Please try again.',
+                  [{ text: 'OK' }]
+                )
+              }
+            }
+          }
+        ]
+      )
+    } catch (error) {
+      console.error('Error in sync function:', error)
+    }
   }
 
   const menuItems = [
@@ -125,6 +160,12 @@ export default function ProfileScreen({ navigation }) {
       description: "View your submitted businesses",
       icon: "clipboard-list-outline",
       onPress: () => navigation.navigate("MyBusinessSubmissions"),
+    },
+    {
+      title: "Sync Business Status",
+      description: "Update business status based on MapMission status",
+      icon: "shield-sync-outline",
+      onPress: handleSyncBusinessVerification,
     },
     {
       title: "Accessibility Preferences",
@@ -179,7 +220,11 @@ export default function ProfileScreen({ navigation }) {
         <Card style={styles.profileCard}>
           <Card.Content style={styles.profileContent}>
             <View style={styles.profileHeader}>
-              <Avatar.Text size={80} label={userData.avatar} />
+              {userData.avatar_url ? (
+                <Image source={{ uri: userData.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <Avatar.Text size={80} label={userData.avatar} />
+              )}
               <View style={styles.profileInfo}>
                 <Text variant="headlineSmall" style={styles.userName}>
                   {userData.name}
@@ -287,6 +332,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f0f0f0',
   },
   profileInfo: {
     marginLeft: 16,
