@@ -11,22 +11,54 @@ export default function AddReviewScreen({ route, navigation }) {
   const { user } = useContext(AuthContext)
   
   const [overallRating, setOverallRating] = useState(0)
-  const [accessibilityRatings, setAccessibilityRatings] = useState({
-    mobility: 0,
-    visual: 0,
-    hearing: 0,
-    cognitive: 0,
-  })
+  const [accessibilityRatings, setAccessibilityRatings] = useState({})
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  const accessibilityCategories = [
-    { key: "mobility", label: "Mobility", icon: "wheelchair-accessibility" },
-    { key: "visual", label: "Visual", icon: "eye" },
-    { key: "hearing", label: "Hearing", icon: "ear-hearing" },
-    { key: "cognitive", label: "Cognitive", icon: "brain" },
-  ]
+  // Get accessibility features from the business data
+  const getBusinessAccessibilityFeatures = () => {
+    const businessFeatures = place?.accessibility_features || []
+    
+    if (businessFeatures.length === 0) {
+      return []
+    }
+    
+    // Map business accessibility features to display format with icons
+    return businessFeatures.map(feature => {
+      // Convert snake_case to display format
+      const label = feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      
+      // Map to appropriate icons
+      const iconMap = {
+        'wheelchair_accessible': 'wheelchair-accessibility',
+        'accessible_restrooms': 'toilet',
+        'elevator_access': 'elevator',
+        'braille_signs': 'braille',
+        'hearing_loop': 'ear-hearing',
+        'accessible_parking': 'car',
+        'wide_aisles': 'resize',
+        'ramp_access': 'stairs-up',
+        'audio_guides': 'headphones',
+        'large_print': 'format-size',
+      }
+      
+      return {
+        key: feature, // Use the original business feature key
+        label: label,
+        icon: iconMap[feature] || 'check-circle'
+      }
+    })
+  }
+
+  const accessibilityCategories = getBusinessAccessibilityFeatures()
+
+  // Debug: Log the received place data and accessibility features
+  console.log('AddReviewScreen received place data:', {
+    placeName: place?.name,
+    accessibilityFeatures: place?.accessibility_features,
+    availableCategories: accessibilityCategories.map(c => ({ key: c.key, label: c.label }))
+  })
 
   const renderStars = (rating, onPress) => {
     return (
@@ -77,7 +109,7 @@ export default function AddReviewScreen({ route, navigation }) {
       setSubmitting(true)
 
       const reviewData = {
-        place_id: place.id,
+        business_id: place.id,
         user_id: user.id,
         overall_rating: overallRating,
         accessibility_ratings: accessibilityRatings,
@@ -85,7 +117,9 @@ export default function AddReviewScreen({ route, navigation }) {
         content: content.trim(),
       }
 
+      console.log('Submitting review data:', reviewData)
       await DatabaseService.createReview(reviewData)
+      console.log('Review submitted successfully!')
 
       Alert.alert(
         "Success",
@@ -146,33 +180,48 @@ export default function AddReviewScreen({ route, navigation }) {
           <Divider style={styles.divider} />
 
           {/* Accessibility Ratings */}
-          <View style={styles.section}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Accessibility Ratings
-            </Text>
-            <Text variant="bodySmall" style={styles.sectionSubtitle}>
-              Rate accessibility features (optional)
-            </Text>
-            
-            {accessibilityCategories.map((category) => (
-              <View key={category.key} style={styles.accessibilityItem}>
-                <View style={styles.accessibilityHeader}>
-                  <Icon name={category.icon} size={24} color="#2E7D32" />
-                  <Text variant="titleSmall" style={styles.accessibilityLabel}>
-                    {category.label}
-                  </Text>
+          {accessibilityCategories.length > 0 ? (
+            <View style={styles.section}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Accessibility Features Rating
+              </Text>
+              <Text variant="bodySmall" style={styles.sectionSubtitle}>
+                Rate the accessibility features this business offers ({accessibilityCategories.length} features)
+              </Text>
+              
+              {accessibilityCategories.map((category) => (
+                <View key={category.key} style={styles.accessibilityItem}>
+                  <View style={styles.accessibilityHeader}>
+                    <Icon name={category.icon} size={24} color="#2E7D32" />
+                    <Text variant="titleSmall" style={styles.accessibilityLabel}>
+                      {category.label}
+                    </Text>
+                  </View>
+                  {renderStars(
+                    accessibilityRatings[category.key] || 0,
+                    (rating) =>
+                      setAccessibilityRatings({
+                        ...accessibilityRatings,
+                        [category.key]: rating,
+                      })
+                  )}
                 </View>
-                {renderStars(
-                  accessibilityRatings[category.key],
-                  (rating) =>
-                    setAccessibilityRatings({
-                      ...accessibilityRatings,
-                      [category.key]: rating,
-                    })
-                )}
+              ))}
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Accessibility Features Rating
+              </Text>
+              <View style={styles.noFeaturesContainer}>
+                <Icon name="information-outline" size={24} color="#666" />
+                <Text variant="bodyMedium" style={styles.noFeaturesText}>
+                  This business has not declared any specific accessibility features to rate.
+                  You can still share your overall experience in the review section.
+                </Text>
               </View>
-            ))}
-          </View>
+            </View>
+          )}
 
           <Divider style={styles.divider} />
 
@@ -318,6 +367,21 @@ const styles = StyleSheet.create({
   },
   accessibilityLabel: {
     fontWeight: "500",
+  },
+  noFeaturesContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  noFeaturesText: {
+    flex: 1,
+    color: '#666',
+    lineHeight: 20,
   },
   input: {
     backgroundColor: "#fff",

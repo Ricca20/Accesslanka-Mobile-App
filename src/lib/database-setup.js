@@ -186,12 +186,42 @@ $$ language 'plpgsql';
   }
 }
 
+const createAccessibilityContributionTables = async () => {
+  try {
+    console.log('Checking if Accessibility Contributions tables exist...')
+    
+    // Check if accessibility_photos table exists
+    const { data: testData, error: testError } = await supabase
+      .from('accessibility_photos')
+      .select('id')
+      .limit(1)
+    
+    if (testError && testError.code === 'PGRST205') {
+      // Table doesn't exist
+      console.log('Accessibility Contributions tables do not exist. Please run the SQL manually.')
+      console.log('Run the SQL from accessibility_contributions_schema.sql in your Supabase dashboard.')
+      throw new Error('Accessibility Contributions tables missing - please add manually using SQL file')
+    } else if (testError) {
+      console.error('Error checking Accessibility Contributions tables:', testError)
+      throw testError
+    } else {
+      console.log('Accessibility Contributions tables already exist!')
+      return true
+    }
+    
+  } catch (error) {
+    console.error('Accessibility Contributions setup error:', error)
+    throw error
+  }
+}
+
 const setupDatabase = async () => {
   try {
     console.log('Starting database setup...')
     
     await addStatusColumnToBusinesses()
     await createMapMissionTables()
+    await createAccessibilityContributionTables()
     
     console.log('Database setup completed successfully!')
     return true
@@ -202,7 +232,7 @@ const setupDatabase = async () => {
 }
 
 // Export for use in React Native app
-export { addStatusColumnToBusinesses, createMapMissionTables, setupDatabase }
+export { addStatusColumnToBusinesses, createMapMissionTables, createAccessibilityContributionTables, setupDatabase }
 
 // If running as a script
 if (typeof require !== 'undefined' && require.main === module) {

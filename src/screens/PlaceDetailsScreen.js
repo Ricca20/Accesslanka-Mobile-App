@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { View, StyleSheet, ScrollView, Dimensions, Image, FlatList, TouchableOpacity, Linking, Alert } from "react-native"
 import { Text, Card, Button, Chip, Divider, Badge, ActivityIndicator } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { useFocusEffect } from "@react-navigation/native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../lib/database"
 
@@ -10,11 +11,15 @@ const IMAGE_WIDTH = width
 const IMAGE_HEIGHT = 250
 
 export default function PlaceDetailsScreen({ route = { params: {} }, navigation = {} }) {
-  const { place } = route.params
+  const { place, missionId } = route.params
   const [isFavorite, setIsFavorite] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(true)
+  const [missionContributions, setMissionContributions] = useState(null)
+  const [loadingContributions, setLoadingContributions] = useState(false)
+  const [allAccessibilityContributions, setAllAccessibilityContributions] = useState(null)
+  const [loadingAllContributions, setLoadingAllContributions] = useState(false)
   const flatListRef = useRef(null)
 
   // Debug: Log the received place data
@@ -73,17 +78,56 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
   // Fetch reviews for this place
   useEffect(() => {
     fetchReviews()
-  }, [place.id])
+    fetchAllAccessibilityContributions()
+    if (missionId) {
+      fetchMissionContributions()
+    }
+  }, [place.id, missionId])
+
+  // Refresh reviews when screen gains focus (e.g., returning from AddReview screen)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('PlaceDetailsScreen focused - refreshing reviews at:', new Date().toISOString())
+      fetchReviews()
+    }, [place.id])
+  )
 
   const fetchReviews = async () => {
     try {
       setLoadingReviews(true)
-      const reviewsData = await DatabaseService.getReviews({ placeId: place.id })
+      console.log('Fetching reviews for business ID:', place.id)
+      const reviewsData = await DatabaseService.getReviews({ businessId: place.id })
+      console.log('Fetched reviews:', reviewsData?.length || 0, 'reviews')
+      console.log('First review structure:', JSON.stringify(reviewsData?.[0], null, 2))
       setReviews(reviewsData || [])
     } catch (error) {
       console.error('Error fetching reviews:', error)
     } finally {
       setLoadingReviews(false)
+    }
+  }
+
+  const fetchMissionContributions = async () => {
+    try {
+      setLoadingContributions(true)
+      const summary = await DatabaseService.getBusinessAccessibilitySummary(place.id, missionId)
+      setMissionContributions(summary)
+    } catch (error) {
+      console.error('Error fetching mission contributions:', error)
+    } finally {
+      setLoadingContributions(false)
+    }
+  }
+
+  const fetchAllAccessibilityContributions = async () => {
+    try {
+      setLoadingAllContributions(true)
+      const contributions = await DatabaseService.getBusinessAccessibilityContributions(place.id)
+      setAllAccessibilityContributions(contributions)
+    } catch (error) {
+      console.error('Error fetching all accessibility contributions:', error)
+    } finally {
+      setLoadingAllContributions(false)
     }
   }
 
@@ -179,9 +223,9 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           <View style={styles.reviewHeader}>
             <View style={styles.reviewUserInfo}>
               <Text variant="titleSmall" style={styles.reviewUserName}>
-                {review.user?.full_name || 'Anonymous User'}
+                {review.users?.full_name || 'Anonymous User'}
               </Text>
-              {review.user?.verified && (
+              {review.users?.verified && (
                 <Icon name="check-decagram" size={16} color="#2E7D32" />
               )}
             </View>
@@ -211,20 +255,36 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           </Text>
 
           {/* Accessibility Ratings */}
-          {review.accessibility_ratings && (
+          {review.accessibility_ratings && Object.keys(review.accessibility_ratings).length > 0 && (
             <View style={styles.reviewAccessibilityRatings}>
-              {Object.entries(review.accessibility_ratings).map(([category, rating]) => {
+              {Object.entries(review.accessibility_ratings).map(([featureKey, rating]) => {
                 if (rating > 0) {
-                  const icons = {
-                    mobility: 'wheelchair-accessibility',
-                    visual: 'eye',
-                    hearing: 'ear-hearing',
-                    cognitive: 'brain',
+                  // Convert feature key to display format
+                  const featureLabel = featureKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                  
+                  // Map to appropriate icons
+                  const iconMap = {
+                    'wheelchair_accessible': 'wheelchair-accessibility',
+                    'accessible_restrooms': 'toilet',
+                    'elevator_access': 'elevator',
+                    'braille_signs': 'braille',
+                    'hearing_loop': 'ear-hearing',
+                    'accessible_parking': 'car',
+                    'wide_aisles': 'resize',
+                    'ramp_access': 'stairs-up',
+                    'audio_guides': 'headphones',
+                    'large_print': 'format-size',
+                    // Legacy support for old categories
+                    'mobility': 'wheelchair-accessibility',
+                    'visual': 'eye',
+                    'hearing': 'ear-hearing',
+                    'cognitive': 'brain',
                   }
+                  
                   return (
-                    <Chip key={category} style={styles.accessibilityChip} compact>
-                      <Icon name={icons[category]} size={14} color="#2E7D32" />
-                      {` ${category}: ${rating}/5`}
+                    <Chip key={featureKey} style={styles.accessibilityChip} compact>
+                      <Icon name={iconMap[featureKey] || 'check-circle'} size={14} color="#2E7D32" />
+                      {` ${featureLabel}: ${rating}/5`}
                     </Chip>
                   )
                 }
@@ -359,12 +419,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                   {placeData.rating}/5 Overall
                 </Text>
               </View>
-              <View style={styles.accessibilityOverall}>
-                <Icon name="wheelchair-accessibility" size={20} color="#2E7D32" />
-                <Text variant="bodyMedium" style={styles.accessibilityText}>
-                  {placeData.accessibilityRating}/5 Accessibility
-                </Text>
-              </View>
+              
             </View>
           </View>
 
@@ -417,25 +472,6 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
             <Text variant="bodyMedium" style={styles.description}>
               {placeData.description}
             </Text>
-          </View>
-
-          <Divider style={styles.divider} />
-
-          {/* Prominent Wheelchair Accessibility Section */}
-          <View style={styles.section}>
-            <View style={styles.accessibilityHeaderSection}>
-              <Icon name="wheelchair-accessibility" size={28} color="#2E7D32" />
-              <View style={styles.accessibilityHeaderText}>
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Wheelchair Accessibility
-                </Text>
-                <Text variant="bodySmall" style={styles.accessibilitySubtext}>
-                  {accessibilityStatus === 'yes' && 'This place has wheelchair accessible facilities'}
-                  {accessibilityStatus === 'partial' && 'This place has limited accessibility'}
-                  {accessibilityStatus === 'unknown' && 'Accessibility information not verified'}
-                </Text>
-              </View>
-            </View>
           </View>
 
           <Divider style={styles.divider} />
@@ -529,19 +565,226 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
 
           <Divider style={styles.divider} />
 
+          {/* All MapMission Accessibility Contributions */}
+          {allAccessibilityContributions && allAccessibilityContributions.totalContributions > 0 && (
+            <>
+              <View style={styles.section}>
+                <View style={styles.accessibilityContributionsHeader}>
+                  <Icon name="account-group" size={24} color="#2E7D32" />
+                  <Text variant="titleMedium" style={styles.sectionTitle}>
+                    Community MapMission Reports
+                  </Text>
+                </View>
+                
+                <Text variant="bodySmall" style={styles.contributionsSubtext}>
+                  Verified contributions from MapMission participants
+                </Text>
+
+                {loadingAllContributions ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator animating={true} color="#2E7D32" />
+                    <Text style={styles.loadingText}>Loading community reports...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.allContributionsContainer}>
+                    {/* Photos */}
+                    {allAccessibilityContributions.photos.length > 0 && (
+                      <Card style={styles.contributionTypeCard}>
+                        <Card.Content>
+                          <View style={styles.contributionTypeHeader}>
+                            <Icon name="camera" size={20} color="#FF5722" />
+                            <Text variant="titleSmall" style={styles.contributionTypeTitle}>
+                              Mapmission Photos ({allAccessibilityContributions.photos.length})
+                            </Text>
+                          </View>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
+                            {allAccessibilityContributions.photos.slice(0, 5).map((photo, index) => (
+                              <View key={index} style={styles.contributionPhotoItem}>
+                                <Image source={{ uri: photo.photo_url }} style={styles.contributionPhoto} />
+                                <Text numberOfLines={2} style={styles.photoDescription}>
+                                  {photo.feature_description}
+                                </Text>
+                                <Text style={styles.photoMission}>
+                                  From: {photo.mission_title}
+                                </Text>
+                              </View>
+                            ))}
+                          </ScrollView>
+                        </Card.Content>
+                      </Card>
+                    )}
+
+                    {/* Reviews */}
+                    {allAccessibilityContributions.reviews.length > 0 && (
+                      <Card style={styles.contributionTypeCard}>
+                        <Card.Content>
+                          <View style={styles.contributionTypeHeader}>
+                            <Icon name="comment-text" size={20} color="#2196F3" />
+                            <Text variant="titleSmall" style={styles.contributionTypeTitle}>
+                              Mapmission Reviews ({allAccessibilityContributions.reviews.length})
+                            </Text>
+                          </View>
+                          {allAccessibilityContributions.reviews.slice(0, 3).map((review, index) => (
+                            <View key={index} style={styles.contributionReviewItem}>
+                              <Text variant="bodyMedium" style={styles.reviewText}>
+                                "{review.review_text}"
+                              </Text>
+                              <View style={styles.reviewMeta}>
+                                <Text style={styles.reviewFeature}>
+                                  {review.feature_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </Text>
+                                <Text style={styles.reviewDifficulty}>
+                                  {review.difficulty_level}
+                                </Text>
+                                <Text style={styles.reviewMission}>
+                                  {review.mission_title}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+                        </Card.Content>
+                      </Card>
+                    )}
+
+                    {/* Ratings Summary */}
+                    {allAccessibilityContributions.ratings.length > 0 && (
+                      <Card style={styles.contributionTypeCard}>
+                        <Card.Content>
+                          <View style={styles.contributionTypeHeader}>
+                            <Icon name="star" size={20} color="#FF9800" />
+                            <Text variant="titleSmall" style={styles.contributionTypeTitle}>
+                              Mapmission Ratings ({allAccessibilityContributions.ratings.length})
+                            </Text>
+                          </View>
+                          <View style={styles.ratingsGrid}>
+                            {['accessibility_rating', 'availability_rating', 'condition_rating'].map(ratingType => {
+                              const ratings = allAccessibilityContributions.ratings.map(r => r[ratingType]).filter(r => r > 0)
+                              const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
+                              
+                              return avgRating > 0 ? (
+                                <View key={ratingType} style={styles.ratingItem}>
+                                  <Text style={styles.ratingLabel}>
+                                    {ratingType.replace(/_rating/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  </Text>
+                                  <View style={styles.ratingStars}>
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <Icon
+                                        key={star}
+                                        name={star <= Math.round(avgRating) ? 'star' : 'star-outline'}
+                                        size={16}
+                                        color="#FF9800"
+                                      />
+                                    ))}
+                                    <Text style={styles.ratingValue}>({avgRating.toFixed(1)})</Text>
+                                  </View>
+                                </View>
+                              ) : null
+                            })}
+                          </View>
+                        </Card.Content>
+                      </Card>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              <Divider style={styles.divider} />
+            </>
+          )}
+
+          {/* Mission Contributions Section */}
+          {missionId && (
+            <>
+              <View style={styles.section}>
+                <View style={styles.missionHeader}>
+                  <Icon name="target" size={24} color="#4CAF50" />
+                  <Text variant="titleMedium" style={styles.missionSectionTitle}>
+                    Mission Contributions
+                  </Text>
+                  <Button
+                    mode="contained"
+                    icon="plus"
+                    compact
+                    onPress={() => navigation.navigate('AccessibilityContribution', { 
+                      mission: { id: missionId },
+                      business: placeData 
+                    })}
+                    buttonColor="#4CAF50"
+                  >
+                    Contribute
+                  </Button>
+                </View>
+
+                {loadingContributions ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator animating={true} color="#4CAF50" />
+                    <Text style={styles.loadingText}>Loading contributions...</Text>
+                  </View>
+                ) : missionContributions ? (
+                  <View style={styles.contributionsGrid}>
+                    {Object.entries(missionContributions).map(([feature, data]) => {
+                      if (data.photosCount === 0 && data.reviewsCount === 0 && data.ratingsCount === 0) return null
+                      
+                      return (
+                        <Card key={feature} style={styles.contributionCard}>
+                          <Card.Content style={styles.contributionCardContent}>
+                            <Text variant="titleSmall" style={styles.featureName}>
+                              {feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </Text>
+                            
+                            <View style={styles.contributionStats}>
+                              <View style={styles.contributionStat}>
+                                <Icon name="camera" size={16} color="#FF5722" />
+                                <Text style={styles.contributionCount}>{data.photosCount}</Text>
+                              </View>
+                              <View style={styles.contributionStat}>
+                                <Icon name="comment-text" size={16} color="#2196F3" />
+                                <Text style={styles.contributionCount}>{data.reviewsCount}</Text>
+                              </View>
+                              <View style={styles.contributionStat}>
+                                <Icon name="star" size={16} color="#FF9800" />
+                                <Text style={styles.contributionCount}>{data.ratingsCount}</Text>
+                              </View>
+                            </View>
+                            
+                            {data.averageRatings && data.averageRatings.overall > 0 && (
+                              <View style={styles.averageRating}>
+                                <Text style={styles.ratingLabel}>Avg: </Text>
+                                <Text style={styles.ratingValue}>
+                                  {data.averageRatings.overall.toFixed(1)}/5
+                                </Text>
+                              </View>
+                            )}
+                          </Card.Content>
+                        </Card>
+                      )
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.noContributionsText}>
+                    No contributions yet. Be the first to contribute!
+                  </Text>
+                )}
+              </View>
+
+              <Divider style={styles.divider} />
+            </>
+          )}
+
           {/* Reviews Section */}
           <View style={styles.section}>
             <View style={styles.reviewsHeader}>
               <Text variant="titleMedium" style={styles.sectionTitle}>
-                Reviews ({reviews.length})
+                User Reviews ({reviews.length})
               </Text>
               <Button
                 mode="contained"
                 icon="star-plus"
                 compact
                 onPress={() => navigation.navigate('AddReview', { place: placeData })}
+                style={styles.addReviewButton}
               >
-                Write Review
+                Add Review
               </Button>
             </View>
 
@@ -573,22 +816,6 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                 </Button>
               </View>
             )}
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionSection}>
-            <Button
-              mode="outlined"
-              icon="flag"
-              style={styles.actionButton}
-              onPress={() => {
-                // TODO: Implement report issue functionality
-                Alert.alert("Report Issue", "This feature is coming soon!")
-              }}
-              accessibilityLabel="Report issue with this place"
-            >
-              Report Issue
-            </Button>
           </View>
         </View>
       </ScrollView>
@@ -713,20 +940,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  accessibilityOverall: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
   starsContainer: {
     flexDirection: "row",
   },
   ratingText: {
     color: "#666",
-  },
-  accessibilityText: {
-    color: "#2E7D32",
-    fontWeight: "bold",
   },
   divider: {
     marginVertical: 16,
@@ -738,6 +956,73 @@ const styles = StyleSheet.create({
     color: "#2E7D32",
     fontWeight: "bold",
     marginBottom: 12,
+  },
+  missionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  missionSectionTitle: {
+    color: "#4CAF50",
+    fontWeight: "bold",
+    flex: 1,
+  },
+  contributionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  contributionCard: {
+    flex: 1,
+    minWidth: 150,
+    maxWidth: '48%',
+  },
+  contributionCardContent: {
+    paddingVertical: 12,
+  },
+  featureName: {
+    color: '#333',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  contributionStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  contributionStat: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  contributionCount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  averageRating: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  ratingLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  ratingValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FF9800',
+  },
+  noContributionsText: {
+    textAlign: 'center',
+    color: '#666',
+    fontStyle: 'italic',
+    paddingVertical: 20,
   },
   thumbnailScroll: {
     marginTop: 8,
@@ -770,24 +1055,6 @@ const styles = StyleSheet.create({
   description: {
     color: "#666",
     lineHeight: 22,
-  },
-  accessibilityHeaderSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 16,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2E7D32',
-  },
-  accessibilityHeaderText: {
-    flex: 1,
-  },
-  accessibilitySubtext: {
-    color: '#666',
-    marginTop: 4,
-    lineHeight: 18,
   },
   featuresContainer: {
     flexDirection: "row",
@@ -839,20 +1106,14 @@ const styles = StyleSheet.create({
     color: "#2E7D32",
     textDecorationLine: "underline",
   },
-  actionSection: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 16,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 8,
-  },
   reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  addReviewButton: {
+    backgroundColor: '#2E7D32',
   },
   reviewsList: {
     gap: 12,
@@ -934,5 +1195,116 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     color: '#666',
+  },
+  accessibilityContributionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  contributionsBadge: {
+    backgroundColor: '#2E7D32',
+    color: 'white',
+  },
+  contributionsSubtext: {
+    color: '#666',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  allContributionsContainer: {
+    gap: 12,
+  },
+  contributionTypeCard: {
+    backgroundColor: '#F8F9FA',
+    elevation: 1,
+  },
+  contributionTypeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  contributionTypeTitle: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  photosScroll: {
+    marginTop: 8,
+  },
+  contributionPhotoItem: {
+    marginRight: 12,
+    width: 120,
+  },
+  contributionPhoto: {
+    width: 120,
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  photoDescription: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 4,
+  },
+  photoMission: {
+    fontSize: 10,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  contributionReviewItem: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2196F3',
+  },
+  reviewText: {
+    color: '#333',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  reviewMeta: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  reviewFeature: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: 'bold',
+  },
+  reviewDifficulty: {
+    fontSize: 12,
+    color: '#FF9800',
+    textTransform: 'capitalize',
+  },
+  reviewMission: {
+    fontSize: 12,
+    color: '#666',
+  },
+  ratingsGrid: {
+    gap: 8,
+  },
+  ratingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  ratingLabel: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingValue: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
   },
 })

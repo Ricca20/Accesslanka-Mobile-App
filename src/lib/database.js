@@ -271,6 +271,186 @@ export class DatabaseService {
     return data
   }
 
+  static async verifyBusinessFromMapMission(businessId, missionId) {
+    try {
+      console.log(`Verifying business ${businessId} from MapMission ${missionId}`)
+      
+      // Mark business as verified and add verification details
+      const { data, error } = await supabase
+        .from('businesses')
+        .update({
+          verified: true,
+          status: 'verified',
+          verification_method: 'mapmission',
+          verification_source: missionId,
+          verified_at: new Date().toISOString()
+        })
+        .eq('id', businessId)
+        .select()
+        .single()
+
+      if (error) throw error
+      
+      console.log('Business verified successfully:', data)
+      return data
+    } catch (error) {
+      console.error('Error verifying business:', error)
+      throw error
+    }
+  }
+
+  static async syncBusinessVerificationStatus() {
+    try {
+      console.log('Starting business verification status sync...')
+      
+      // Find all businesses with active or completed MapMissions that aren't verified yet
+      const { data: unverifiedBusinesses, error: businessError } = await supabase
+        .from('businesses')
+        .select(`
+          id, 
+          name, 
+          status,
+          verified,
+          mapmissions(id, status, created_at)
+        `)
+        .not('status', 'eq', 'verified')
+        .filter('mapmissions.status', 'in', '("active","completed")')
+
+      if (businessError) throw businessError
+
+      console.log(`Found ${unverifiedBusinesses?.length || 0} businesses to potentially verify`)
+
+      if (!unverifiedBusinesses?.length) {
+        return { updated: 0, message: 'No businesses need verification updates' }
+      }
+
+      let updateCount = 0
+      const updatePromises = unverifiedBusinesses.map(async (business) => {
+        // Only update if business has active/completed missions
+        const activeMissions = business.mapmissions?.filter(m => 
+          m.status === 'active' || m.status === 'completed'
+        )
+
+        if (activeMissions?.length > 0) {
+          try {
+            const latestMission = activeMissions.sort((a, b) => 
+              new Date(b.created_at) - new Date(a.created_at)
+            )[0]
+
+            await this.verifyBusinessFromMapMission(business.id, latestMission.id)
+            updateCount++
+            console.log(`Verified business: ${business.name}`)
+          } catch (error) {
+            console.error(`Failed to verify business ${business.name}:`, error)
+          }
+        }
+      })
+
+      await Promise.all(updatePromises)
+
+      console.log(`Business verification sync completed. Updated ${updateCount} businesses.`)
+      return { 
+        updated: updateCount, 
+        message: `Successfully verified ${updateCount} businesses with active MapMissions` 
+      }
+    } catch (error) {
+      console.error('Error syncing business verification status:', error)
+      throw error
+    }
+  }
+
+  static async syncBusinessStatusWithMapMissions() {
+    try {
+      console.log('Starting comprehensive business status sync with MapMissions...')
+      
+      // Get all businesses with their associated MapMissions
+      const { data: businesses, error: businessError } = await supabase
+        .from('businesses')
+        .select(`
+          id, 
+          name, 
+          status,
+          mapmissions(id, status, created_at)
+        `)
+
+      if (businessError) throw businessError
+
+      console.log(`Found ${businesses?.length || 0} businesses to check`)
+
+      if (!businesses?.length) {
+        return { updated: 0, message: 'No businesses to sync' }
+      }
+
+      let updateCount = 0
+      const updatePromises = businesses.map(async (business) => {
+        try {
+          // Get all missions for this business, sorted by creation date (newest first)
+          const missions = business.mapmissions?.sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+          ) || []
+
+          if (missions.length === 0) {
+            // No missions - keep current status or set to default
+            return
+          }
+
+          // Get the latest mission to determine business status
+          const latestMission = missions[0]
+          let newBusinessStatus = business.status // Default to current status
+
+          // Determine new business status based on latest MapMission status
+          switch (latestMission.status) {
+            case 'upcoming':
+              newBusinessStatus = 'pending'
+              break
+            case 'active':
+              newBusinessStatus = 'verified'
+              break
+            case 'completed':
+              newBusinessStatus = 'verified' // Remain verified after completion
+              break
+            default:
+              // Unknown status, keep current business status
+              return
+          }
+
+          // Only update if status has changed
+          if (newBusinessStatus !== business.status) {
+            const { error: updateError } = await supabase
+              .from('businesses')
+              .update({ 
+                status: newBusinessStatus,
+                verified: newBusinessStatus === 'verified',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', business.id)
+
+            if (updateError) {
+              console.error(`Failed to update business ${business.name}:`, updateError)
+              return
+            }
+
+            updateCount++
+            console.log(`Updated business "${business.name}" status: ${business.status} → ${newBusinessStatus}`)
+          }
+        } catch (error) {
+          console.error(`Error processing business ${business.name}:`, error)
+        }
+      })
+
+      await Promise.all(updatePromises)
+
+      console.log(`Business status sync completed. Updated ${updateCount} businesses.`)
+      return { 
+        updated: updateCount, 
+        message: `Successfully synced ${updateCount} business statuses with MapMissions` 
+      }
+    } catch (error) {
+      console.error('Error syncing business status with MapMissions:', error)
+      throw error
+    }
+  }
+
   static async deleteBusiness(id) {
     const { error } = await supabase
       .from('businesses')
@@ -342,22 +522,50 @@ export class DatabaseService {
 
   // Review management
   static async createReview(reviewData) {
+    console.log('DatabaseService.createReview called with:', reviewData)
     const { data, error } = await supabase
       .from('reviews')
       .insert([reviewData])
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('Database error creating review:', error)
+      throw error
+    }
+    console.log('Review created successfully:', data)
     return data
   }
 
   static async getReviews(options = {}) {
+    console.log('getReviews called with options:', options)
+    
+    // First, get reviews without user join to see if they exist
+    let baseQuery = supabase
+      .from('reviews')
+      .select('*')
+    
+    if (options.businessId) {
+      baseQuery = baseQuery.eq('business_id', options.businessId)
+    }
+    
+    if (options.placeId) {
+      baseQuery = baseQuery.eq('place_id', options.placeId)
+    }
+    
+    if (options.userId) {
+      baseQuery = baseQuery.eq('user_id', options.userId)
+    }
+    
+    const { data: baseReviews, error: baseError } = await baseQuery.order('created_at', { ascending: false })
+    console.log('Base reviews without joins:', baseReviews?.length || 0, 'reviews found')
+    
+    // Now get reviews with user join
     let query = supabase
       .from('reviews')
       .select(`
         *,
-        user:users(full_name, verified),
+        users(id, full_name, verified),
         business:businesses(name),
         place:places(name)
       `)
@@ -384,7 +592,13 @@ export class DatabaseService {
 
     const { data, error } = await query.order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching reviews with joins:', error)
+      throw error
+    }
+    
+    console.log('Reviews fetched with joins:', data?.length || 0, 'reviews')
+    console.log('Raw reviews data:', JSON.stringify(data?.slice(0, 2), null, 2))
     
     // Add helpful status for current user if provided
     if (options.currentUserId && data) {
@@ -1061,6 +1275,15 @@ export class DatabaseService {
         .single()
 
       if (error) throw error
+      
+      // Automatically add the creator as a participant
+      try {
+        await this.joinMapMission(data.id, data.created_by)
+      } catch (participantError) {
+        // If adding as participant fails, don't fail the entire mission creation
+        console.warn('Failed to add creator as participant:', participantError)
+      }
+      
       return data
     } catch (error) {
       console.error('Error creating MapMission:', error)
@@ -1195,6 +1418,31 @@ export class DatabaseService {
     }
   }
 
+  static async getLatestMissionForBusiness(businessId) {
+    try {
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 means no results found, which is expected sometimes
+        throw error
+      }
+
+      return data || null
+    } catch (error) {
+      if (error.code === 'PGRST116') {
+        return null // No mission found
+      }
+      console.error('Error fetching latest mission for business:', error)
+      throw error
+    }
+  }
+
   static async isUserInMission(missionId, userId) {
     try {
       const { data, error } = await supabase
@@ -1238,6 +1486,651 @@ export class DatabaseService {
       }
     } catch (error) {
       console.error('Error fetching mission stats:', error)
+      throw error
+    }
+  }
+
+  static async startMapMission(missionId, userId) {
+    try {
+      // First verify the user is the creator of the mission
+      const { data: mission, error: missionError } = await supabase
+        .from('mapmissions')
+        .select('created_by, status, max_participants, business_id')
+        .eq('id', missionId)
+        .single()
+
+      if (missionError) throw missionError
+
+      if (mission.created_by !== userId) {
+        throw new Error('Only the mission creator can start the mission')
+      }
+
+      if (mission.status !== 'upcoming') {
+        throw new Error('Mission can only be started from upcoming status')
+      }
+
+      // Check if mission has enough participants
+      const stats = await this.getMissionStats(missionId)
+      if (stats.totalParticipants < mission.max_participants) {
+        throw new Error(`Mission needs ${mission.max_participants} participants but only has ${stats.totalParticipants}`)
+      }
+
+      // Update mission status to active
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', missionId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Sync business status when mission starts
+      try {
+        await this.syncBusinessStatusWithMapMissions()
+        console.log(`Business status synced after MapMission ${missionId} started`)
+      } catch (syncError) {
+        console.warn('Warning: Failed to sync business status:', syncError)
+        // Don't fail the mission start if business sync fails
+      }
+
+      return data
+    } catch (error) {
+      console.error('Error starting MapMission:', error)
+      throw error
+    }
+  }
+
+  static async endMapMission(missionId, userId) {
+    try {
+      // First verify the user is the creator of the mission
+      const { data: mission, error: missionError } = await supabase
+        .from('mapmissions')
+        .select('created_by, status, business_id')
+        .eq('id', missionId)
+        .single()
+
+      if (missionError) {
+        return { success: false, error: `Failed to fetch mission: ${missionError.message}` }
+      }
+
+      if (mission.created_by !== userId) {
+        return { success: false, error: 'Only the mission creator can end the mission' }
+      }
+
+      if (mission.status !== 'active') {
+        return { success: false, error: 'Mission can only be ended from active status' }
+      }
+
+      // Update mission status to completed
+      const { data, error } = await supabase
+        .from('mapmissions')
+        .update({ 
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', missionId)
+        .select()
+        .single()
+
+      if (error) {
+        return { success: false, error: `Failed to update mission: ${error.message}` }
+      }
+
+      // Sync business status after mission completion
+      try {
+        await this.syncBusinessStatusWithMapMissions()
+        console.log('Business status synced after mission completion')
+      } catch (syncError) {
+        console.warn('Warning: Failed to sync business status:', syncError)
+        // Don't fail the mission end if sync fails
+      }
+
+      console.log(`MapMission ${missionId} ended successfully`)
+      return { success: true, data: data, message: 'MapMission ended successfully' }
+    } catch (error) {
+      console.error('Error ending MapMission:', error)
+      return { success: false, error: error.message || 'Failed to end MapMission' }
+    }
+  }
+
+  static async isMissionReadyToStart(missionId) {
+    try {
+      const { data: mission, error: missionError } = await supabase
+        .from('mapmissions')
+        .select('status, max_participants')
+        .eq('id', missionId)
+        .single()
+
+      if (missionError) throw missionError
+
+      if (mission.status !== 'upcoming') {
+        return { ready: false, reason: 'Mission is not in upcoming status' }
+      }
+
+      const stats = await this.getMissionStats(missionId)
+      const isFullyBooked = stats.totalParticipants >= mission.max_participants
+
+      return {
+        ready: isFullyBooked,
+        reason: isFullyBooked ? 'Ready to start' : `Needs ${mission.max_participants - stats.totalParticipants} more participants`,
+        currentParticipants: stats.totalParticipants,
+        requiredParticipants: mission.max_participants
+      }
+    } catch (error) {
+      console.error('Error checking mission readiness:', error)
+      throw error
+    }
+  }
+
+  // Accessibility Contribution methods
+  static async addAccessibilityPhoto(photoData) {
+    try {
+      const { data, error } = await supabase
+        .from('accessibility_photos')
+        .insert([photoData])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error adding accessibility photo:', error)
+      throw error
+    }
+  }
+
+  static async addAccessibilityReview(reviewData) {
+    try {
+      const { data, error } = await supabase
+        .from('accessibility_reviews')
+        .insert([reviewData])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error adding accessibility review:', error)
+      throw error
+    }
+  }
+
+  static async addAccessibilityRating(ratingData) {
+    try {
+      // Use UPSERT (INSERT ON CONFLICT UPDATE) to handle duplicate constraint
+      const { data, error } = await supabase
+        .from('accessibility_ratings')
+        .upsert([{
+          ...ratingData,
+          updated_at: new Date().toISOString()
+        }], {
+          onConflict: 'mission_id,user_id,feature_type',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error adding/updating accessibility rating:', error)
+      throw error
+    }
+  }
+
+  static async updateAccessibilityRating(ratingId, updates) {
+    try {
+      const { data, error } = await supabase
+        .from('accessibility_ratings')
+        .update(updates)
+        .eq('id', ratingId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error updating accessibility rating:', error)
+      throw error
+    }
+  }
+
+  static async getAccessibilityPhotos(options = {}) {
+    try {
+      let query = supabase
+        .from('accessibility_photos')
+        .select(`
+          *,
+          user:users(full_name, verified)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (options.missionId) {
+        query = query.eq('mission_id', options.missionId)
+      }
+
+      if (options.businessId) {
+        query = query.eq('business_id', options.businessId)
+      }
+
+      if (options.userId) {
+        query = query.eq('user_id', options.userId)
+      }
+
+      if (options.featureType) {
+        query = query.eq('feature_type', options.featureType)
+      }
+
+      if (options.limit) {
+        query = query.limit(options.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching accessibility photos:', error)
+      throw error
+    }
+  }
+
+  static async getAccessibilityReviews(options = {}) {
+    try {
+      let query = supabase
+        .from('accessibility_reviews')
+        .select(`
+          *,
+          user:users(full_name, verified)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (options.missionId) {
+        query = query.eq('mission_id', options.missionId)
+      }
+
+      if (options.businessId) {
+        query = query.eq('business_id', options.businessId)
+      }
+
+      if (options.userId) {
+        query = query.eq('user_id', options.userId)
+      }
+
+      if (options.featureType) {
+        query = query.eq('feature_type', options.featureType)
+      }
+
+      if (options.limit) {
+        query = query.limit(options.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching accessibility reviews:', error)
+      throw error
+    }
+  }
+
+  static async getAccessibilityRatings(options = {}) {
+    try {
+      let query = supabase
+        .from('accessibility_ratings')
+        .select(`
+          *,
+          user:users(full_name, verified)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (options.missionId) {
+        query = query.eq('mission_id', options.missionId)
+      }
+
+      if (options.businessId) {
+        query = query.eq('business_id', options.businessId)
+      }
+
+      if (options.userId) {
+        query = query.eq('user_id', options.userId)
+      }
+
+      if (options.featureType) {
+        query = query.eq('feature_type', options.featureType)
+      }
+
+      if (options.limit) {
+        query = query.limit(options.limit)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching accessibility ratings:', error)
+      throw error
+    }
+  }
+
+  static async getUserMissionContributions(missionId, userId) {
+    try {
+      // Since mission_contributions table doesn't exist yet, calculate from individual tables
+      const [photosResult, reviewsResult, ratingsResult] = await Promise.all([
+        supabase.from('accessibility_photos').select('id').eq('mission_id', missionId).eq('user_id', userId),
+        supabase.from('accessibility_reviews').select('id').eq('mission_id', missionId).eq('user_id', userId),
+        supabase.from('accessibility_ratings').select('id').eq('mission_id', missionId).eq('user_id', userId)
+      ])
+
+      const photosCount = photosResult.data?.length || 0
+      const reviewsCount = reviewsResult.data?.length || 0
+      const ratingsCount = ratingsResult.data?.length || 0
+
+      return {
+        photos_count: photosCount,
+        reviews_count: reviewsCount,
+        ratings_count: ratingsCount,
+        total_contributions: photosCount + reviewsCount + ratingsCount,
+        last_contribution_at: new Date().toISOString()
+      }
+    } catch (error) {
+      console.error('Error fetching user mission contributions:', error)
+      return {
+        photos_count: 0,
+        reviews_count: 0,
+        ratings_count: 0,
+        total_contributions: 0,
+        last_contribution_at: null
+      }
+    }
+  }
+
+  static async getMissionContributionsSummary(missionId) {
+    try {
+      // Since mission_contributions table doesn't exist, aggregate from individual tables
+      const [photosResult, reviewsResult, ratingsResult] = await Promise.all([
+        supabase.from('accessibility_photos').select('user_id').eq('mission_id', missionId),
+        supabase.from('accessibility_reviews').select('user_id').eq('mission_id', missionId),
+        supabase.from('accessibility_ratings').select('user_id').eq('mission_id', missionId)
+      ])
+
+      // Group by user and count contributions
+      const userContributions = {}
+      
+      // Count photos
+      photosResult.data?.forEach(photo => {
+        if (!userContributions[photo.user_id]) {
+          userContributions[photo.user_id] = { photos_count: 0, reviews_count: 0, ratings_count: 0 }
+        }
+        userContributions[photo.user_id].photos_count++
+      })
+
+      // Count reviews
+      reviewsResult.data?.forEach(review => {
+        if (!userContributions[review.user_id]) {
+          userContributions[review.user_id] = { photos_count: 0, reviews_count: 0, ratings_count: 0 }
+        }
+        userContributions[review.user_id].reviews_count++
+      })
+
+      // Count ratings
+      ratingsResult.data?.forEach(rating => {
+        if (!userContributions[rating.user_id]) {
+          userContributions[rating.user_id] = { photos_count: 0, reviews_count: 0, ratings_count: 0 }
+        }
+        userContributions[rating.user_id].ratings_count++
+      })
+
+      // Convert to array format
+      const summary = Object.entries(userContributions).map(([userId, contributions]) => ({
+        mission_id: missionId,
+        user_id: userId,
+        photos_count: contributions.photos_count,
+        reviews_count: contributions.reviews_count,
+        ratings_count: contributions.ratings_count,
+        total_contributions: contributions.photos_count + contributions.reviews_count + contributions.ratings_count
+      }))
+
+      return summary
+    } catch (error) {
+      console.error('Error fetching mission contributions summary:', error)
+      return []
+    }
+  }
+
+  static async getBusinessAccessibilityContributions(businessId) {
+    try {
+      console.log(`Fetching all accessibility contributions for business ${businessId}`)
+      
+      // Get all accessibility photos, reviews, and ratings for this business
+      const [photosResult, reviewsResult, ratingsResult] = await Promise.all([
+        supabase
+          .from('accessibility_photos')
+          .select(`
+            *,
+            users(id, full_name, email),
+            mapmissions(id, title)
+          `)
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('accessibility_reviews')
+          .select(`
+            *,
+            users(id, full_name, email),
+            mapmissions(id, title)
+          `)
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('accessibility_ratings')
+          .select(`
+            *,
+            users(id, full_name, email),
+            mapmissions(id, title)
+          `)
+          .eq('business_id', businessId)
+          .order('created_at', { ascending: false })
+      ])
+
+      const photos = photosResult.data || []
+      const reviews = reviewsResult.data || []
+      const ratings = ratingsResult.data || []
+
+      console.log(`Found ${photos.length} photos, ${reviews.length} reviews, ${ratings.length} ratings`)
+
+      return {
+        photos: photos.map(photo => ({
+          ...photo,
+          user_name: photo.users?.full_name || photo.users?.email || 'Anonymous User',
+          mission_title: photo.mapmissions?.title || 'General Accessibility'
+        })),
+        reviews: reviews.map(review => ({
+          ...review,
+          user_name: review.users?.full_name || review.users?.email || 'Anonymous User',
+          mission_title: review.mapmissions?.title || 'General Accessibility'
+        })),
+        ratings: ratings.map(rating => ({
+          ...rating,
+          user_name: rating.users?.full_name || rating.users?.email || 'Anonymous User',
+          mission_title: rating.mapmissions?.title || 'General Accessibility'
+        })),
+        totalContributions: photos.length + reviews.length + ratings.length
+      }
+    } catch (error) {
+      console.error('Error fetching business accessibility contributions:', error)
+      return {
+        photos: [],
+        reviews: [],
+        ratings: [],
+        totalContributions: 0
+      }
+    }
+  }
+
+  static async getBusinessAccessibilitySummary(businessId, missionId = null) {
+    try {
+      // Get accessibility features summary for a business
+      const accessibilityFeatures = [
+        'entrance',
+        'parking',
+        'restroom',
+        'elevator',
+        'ramp',
+        'pathway',
+        'seating',
+        'lighting',
+        'signage',
+        'service_counter'
+      ]
+
+      const summary = {}
+
+      for (const feature of accessibilityFeatures) {
+        // Get photos count
+        let photosQuery = supabase
+          .from('accessibility_photos')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', businessId)
+          .eq('feature_type', feature)
+
+        if (missionId) {
+          photosQuery = photosQuery.eq('mission_id', missionId)
+        }
+
+        // Get reviews count
+        let reviewsQuery = supabase
+          .from('accessibility_reviews')
+          .select('id', { count: 'exact', head: true })
+          .eq('business_id', businessId)
+          .eq('feature_type', feature)
+
+        if (missionId) {
+          reviewsQuery = reviewsQuery.eq('mission_id', missionId)
+        }
+
+        // Get ratings data
+        let ratingsQuery = supabase
+          .from('accessibility_ratings')
+          .select('accessibility_rating, availability_rating, condition_rating, overall_rating')
+          .eq('business_id', businessId)
+          .eq('feature_type', feature)
+
+        if (missionId) {
+          ratingsQuery = ratingsQuery.eq('mission_id', missionId)
+        }
+
+        const [photosResult, reviewsResult, ratingsResult] = await Promise.all([
+          photosQuery,
+          reviewsQuery,
+          ratingsQuery
+        ])
+
+        const ratings = ratingsResult.data || []
+        const avgRatings = ratings.length > 0 ? {
+          accessibility: ratings.reduce((sum, r) => sum + r.accessibility_rating, 0) / ratings.length,
+          availability: ratings.reduce((sum, r) => sum + r.availability_rating, 0) / ratings.length,
+          condition: ratings.reduce((sum, r) => sum + r.condition_rating, 0) / ratings.length,
+          overall: ratings.reduce((sum, r) => sum + r.overall_rating, 0) / ratings.length
+        } : {
+          accessibility: 0,
+          availability: 0,
+          condition: 0,
+          overall: 0
+        }
+
+        summary[feature] = {
+          photosCount: photosResult.count || 0,
+          reviewsCount: reviewsResult.count || 0,
+          ratingsCount: ratings.length,
+          averageRatings: avgRatings
+        }
+      }
+
+      return summary
+    } catch (error) {
+      console.error('Error fetching business accessibility summary:', error)
+      throw error
+    }
+  }
+
+  static async uploadAccessibilityPhoto(imageAsset, missionId, businessId, userId) {
+    try {
+      console.log('Storing accessibility photo locally (like AddMyBusiness)...')
+      
+      // Validate input
+      if (!imageAsset || !imageAsset.uri) {
+        throw new Error('Invalid image asset provided')
+      }
+      
+      if (!missionId || !businessId || !userId) {
+        throw new Error('Missing required IDs for photo upload')
+      }
+
+      console.log('Image asset details:', {
+        uri: imageAsset.uri,
+        type: imageAsset.type,
+        width: imageAsset.width,
+        height: imageAsset.height
+      })
+
+      // Instead of uploading to storage, just return the local URI
+      // This matches the approach used in AddMyBusinessScreen
+      const photoPath = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const photoUrl = imageAsset.uri // Use the local URI directly
+
+      console.log('Photo stored locally:', {
+        photoPath: photoPath,
+        photoUrl: photoUrl
+      })
+
+      return {
+        photoPath: photoPath,
+        photoUrl: photoUrl
+      }
+    } catch (error) {
+      console.error('Error storing accessibility photo:', error)
+      throw error
+    }
+  }
+
+  static async deleteAccessibilityPhoto(photoId, userId) {
+    try {
+      // Since we're using local storage (like AddMyBusiness), we only need to delete from database
+      // No need to delete from Supabase storage since photos are stored locally
+      
+      // First get the photo to ensure user owns it
+      const { data: photo, error: fetchError } = await supabase
+        .from('accessibility_photos')
+        .select('user_id')
+        .eq('id', photoId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if (photo.user_id !== userId) {
+        throw new Error('You can only delete your own photos')
+      }
+
+      // Delete from database only (no storage deletion needed for local photos)
+      const { error: dbError } = await supabase
+        .from('accessibility_photos')
+        .delete()
+        .eq('id', photoId)
+
+      if (dbError) throw dbError
+
+      return true
+    } catch (error) {
+      console.error('Error deleting accessibility photo:', error)
       throw error
     }
   }
