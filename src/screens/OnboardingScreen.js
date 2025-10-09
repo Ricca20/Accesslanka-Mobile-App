@@ -1,11 +1,16 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { View, StyleSheet } from "react-native"
 import { Text, Button, Card, SegmentedButtons } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import AccessibilityService from "../services/AccessibilityService"
 
 export default function OnboardingScreen({ navigation }) {
   const [language, setLanguage] = useState("en")
+
+  useEffect(() => {
+    AccessibilityService.announce("Welcome to AccessLanka. Discover accessible Sri Lanka. Find and review accessible public spaces across Sri Lanka.", 1000)
+  }, [])
 
   const completeOnboarding = async () => {
     try {
@@ -64,38 +69,65 @@ export default function OnboardingScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.languageSelector}>
+    <SafeAreaView 
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel="Welcome screen"
+    >
+      <View style={styles.languageSelector} accessible={false}>
         <SegmentedButtons
           value={language}
-          onValueChange={setLanguage}
+          onValueChange={(value) => {
+            setLanguage(value)
+            const langName = languages.find(l => l.value === value)?.label
+            AccessibilityService.announce(`Language changed to ${langName}`)
+          }}
           buttons={languages}
           accessibilityLabel="Language selector"
+          accessibilityHint="Select your preferred language"
         />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
+      <View style={styles.content} accessible={false}>
+        <View 
+          style={styles.logoContainer}
+          accessible={true}
+          accessibilityLabel="AccessLanka logo"
+          accessibilityRole="header"
+        >
           <Text style={styles.logo}>AccessLanka</Text>
         </View>
 
-        <Card style={styles.card}>
+        <Card style={styles.card} accessible={false}>
           <Card.Content style={styles.cardContent}>
-            <Text variant="headlineMedium" style={styles.tagline}>
+            <Text 
+              variant="headlineMedium" 
+              style={styles.tagline}
+              accessible={true}
+              accessibilityRole="header"
+              accessibilityLabel={getLocalizedText("tagline")}
+            >
               {getLocalizedText("tagline")}
             </Text>
-            <Text variant="bodyLarge" style={styles.subtitle}>
+            <Text 
+              variant="bodyLarge" 
+              style={styles.subtitle}
+              accessible={true}
+              accessibilityLabel={getLocalizedText("subtitle")}
+            >
               {getLocalizedText("subtitle")}
             </Text>
           </Card.Content>
         </Card>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.buttonContainer} accessible={false}>
           <Button
             mode="contained"
             style={styles.button}
             onPress={handleSignUp}
             accessibilityLabel={getLocalizedText("signUp")}
+            accessibilityHint={AccessibilityService.buttonHint("create a new account")}
+            accessibilityRole="button"
           >
             {getLocalizedText("signUp")}
           </Button>
@@ -105,6 +137,8 @@ export default function OnboardingScreen({ navigation }) {
             style={styles.button}
             onPress={handleLogin}
             accessibilityLabel={getLocalizedText("login")}
+            accessibilityHint={AccessibilityService.buttonHint("sign in to your account")}
+            accessibilityRole="button"
           >
             {getLocalizedText("login")}
           </Button>
@@ -114,6 +148,8 @@ export default function OnboardingScreen({ navigation }) {
             style={styles.button}
             onPress={handleGuest}
             accessibilityLabel={getLocalizedText("guest")}
+            accessibilityHint={AccessibilityService.buttonHint("browse the app without signing in")}
+            accessibilityRole="button"
           >
             {getLocalizedText("guest")}
           </Button>

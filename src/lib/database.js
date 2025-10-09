@@ -546,19 +546,30 @@ export class DatabaseService {
       .select('*')
     
     if (options.businessId) {
+      console.log('Filtering by business_id:', options.businessId)
       baseQuery = baseQuery.eq('business_id', options.businessId)
     }
     
     if (options.placeId) {
+      console.log('Filtering by place_id:', options.placeId)
       baseQuery = baseQuery.eq('place_id', options.placeId)
     }
     
     if (options.userId) {
+      console.log('Filtering by user_id:', options.userId)
       baseQuery = baseQuery.eq('user_id', options.userId)
     }
     
     const { data: baseReviews, error: baseError } = await baseQuery.order('created_at', { ascending: false })
     console.log('Base reviews without joins:', baseReviews?.length || 0, 'reviews found')
+    if (baseReviews && baseReviews.length > 0) {
+      console.log('Sample base review:', {
+        id: baseReviews[0].id,
+        business_id: baseReviews[0].business_id,
+        place_id: baseReviews[0].place_id,
+        title: baseReviews[0].title
+      })
+    }
     
     // Now get reviews with user join
     let query = supabase

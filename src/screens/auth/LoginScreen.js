@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { View, StyleSheet, ScrollView, Alert } from "react-native"
 import { Text, TextInput, Button, Card, Divider } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
+import AccessibilityService from "../../services/AccessibilityService"
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth()
@@ -12,30 +13,53 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    // Announce screen name when component mounts
+    AccessibilityService.announce("Login screen. Enter your email and password to sign in.", 500)
+  }, [])
+
   const handleLogin = async () => {
     try {
       setLoading(true)
+      AccessibilityService.announce("Signing in, please wait")
 
       // Validation
       if (!email || !password) {
-        Alert.alert("Error", "Please fill in all fields")
+        const errorMsg = "Please fill in all fields"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Form", errorMsg)
         return
       }
 
       // Sign in user - AuthContext will handle navigation
       await signIn(email, password)
+      AccessibilityService.announceSuccess("Login successful")
     } catch (error) {
       console.error("Login error:", error)
-      Alert.alert("Error", error.message || "Failed to sign in")
+      const errorMsg = error.message || "Failed to sign in"
+      Alert.alert("Error", errorMsg)
+      AccessibilityService.announceFormError("Login", errorMsg)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
+    <SafeAreaView 
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel="Login screen"
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        accessible={false}
+      >
+        <View 
+          style={styles.header}
+          accessible={true}
+          accessibilityRole="header"
+          accessibilityLabel="Welcome Back. Sign in to continue exploring accessible spaces"
+        >
           <Text variant="headlineLarge" style={styles.title}>
             Welcome Back
           </Text>
@@ -44,7 +68,7 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </View>
 
-        <Card style={styles.card}>
+        <Card style={styles.card} accessible={false}>
           <Card.Content style={styles.cardContent}>
             <TextInput
               label="Email"
@@ -54,7 +78,9 @@ export default function LoginScreen({ navigation }) {
               keyboardType="email-address"
               autoCapitalize="none"
               style={styles.input}
-              accessibilityLabel="Email input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Email", true, email)}
+              accessibilityHint="Enter your email address"
+              accessibilityRole="none"
             />
 
             <TextInput
@@ -67,18 +93,30 @@ export default function LoginScreen({ navigation }) {
               right={
                 <TextInput.Icon
                   icon={showPassword ? "eye-off" : "eye"}
-                  onPress={() => setShowPassword(!showPassword)}
+                  onPress={() => {
+                    setShowPassword(!showPassword)
+                    AccessibilityService.announce(showPassword ? "Password hidden" : "Password visible")
+                  }}
                   accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  accessibilityHint={AccessibilityService.buttonHint(showPassword ? "hide password" : "show password")}
+                  accessibilityRole="button"
                 />
               }
-              accessibilityLabel="Password input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Password", true)}
+              accessibilityHint="Enter your password"
+              accessibilityRole="none"
             />
 
             <Button
               mode="text"
-              onPress={() => navigation.navigate("ForgotPassword")}
+              onPress={() => {
+                navigation.navigate("ForgotPassword")
+                AccessibilityService.announceNavigation("Forgot Password")
+              }}
               style={styles.forgotPassword}
-              accessibilityLabel="Forgot password link"
+              accessibilityLabel="Forgot password"
+              accessibilityHint={AccessibilityService.buttonHint("go to password recovery")}
+              accessibilityRole="button"
             >
               Forgot Password?
             </Button>
@@ -87,40 +125,65 @@ export default function LoginScreen({ navigation }) {
               mode="contained" 
               onPress={handleLogin} 
               style={styles.loginButton} 
-              accessibilityLabel="Login button"
+              accessibilityLabel={loading ? "Signing in, please wait" : "Login"}
+              accessibilityHint={loading ? "" : AccessibilityService.buttonHint("sign in to your account")}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: loading, busy: loading }}
               loading={loading}
               disabled={loading}
             >
               {loading ? "Signing In..." : "Login"}
             </Button>
 
-            <Divider style={styles.divider} />
+            <Divider style={styles.divider} {...AccessibilityService.ignoreProps()} />
 
             <Button
               mode="outlined"
-              onPress={() => {}}
+              onPress={() => {
+                AccessibilityService.announce("Google sign in not yet implemented")
+              }}
               style={styles.socialButton}
-              icon={() => <Icon name="google" size={20} color="#DB4437" />}
-              accessibilityLabel="Login with Google"
+              icon={() => <Icon name="google" size={20} color="#DB4437" {...AccessibilityService.ignoreProps()} />}
+              accessibilityLabel="Continue with Google"
+              accessibilityHint={AccessibilityService.buttonHint("sign in using your Google account")}
+              accessibilityRole="button"
             >
               Continue with Google
             </Button>
 
             <Button
               mode="outlined"
-              onPress={() => {}}
+              onPress={() => {
+                AccessibilityService.announce("Facebook sign in not yet implemented")
+              }}
               style={styles.socialButton}
-              icon={() => <Icon name="facebook" size={20} color="#4267B2" />}
-              accessibilityLabel="Login with Facebook"
+              icon={() => <Icon name="facebook" size={20} color="#4267B2" {...AccessibilityService.ignoreProps()} />}
+              accessibilityLabel="Continue with Facebook"
+              accessibilityHint={AccessibilityService.buttonHint("sign in using your Facebook account")}
+              accessibilityRole="button"
             >
               Continue with Facebook
             </Button>
           </Card.Content>
         </Card>
 
-        <View style={styles.footer}>
+        <View 
+          style={styles.footer}
+          accessible={true}
+          accessibilityLabel="Don't have an account? Sign up"
+          accessibilityRole="none"
+        >
           <Text variant="bodyMedium">Don't have an account? </Text>
-          <Button mode="text" onPress={() => navigation.navigate("Register")} accessibilityLabel="Go to sign up">
+          <Button 
+            mode="text" 
+            onPress={() => {
+              navigation.navigate("Register")
+              AccessibilityService.announceNavigation("Register")
+            }}
+            accessibilityLabel="Sign up"
+            accessibilityHint={AccessibilityService.buttonHint("create a new account")}
+            accessibilityRole="button"
+          >
             Sign Up
           </Button>
         </View>

@@ -108,8 +108,54 @@ export default function AddReviewScreen({ route, navigation }) {
     try {
       setSubmitting(true)
 
+      // Log the complete place object to debug
+      console.log('Complete place object:', JSON.stringify(place, null, 2))
+      console.log('Place type:', place.type)
+
+      // Determine if this is a business or a place
+      let businessId = null
+      let placeId = null
+
+      // First check if there's an explicit type field (from ExploreScreen)
+      if (place.type === 'business') {
+        console.log('Detected as business via type field')
+        businessId = place.id
+      } else if (place.type === 'place') {
+        console.log('Detected as place via type field')
+        placeId = place.id
+      } 
+      // Check explicit ID markers
+      else if (place.business_id) {
+        console.log('Detected as business via business_id field')
+        businessId = place.business_id
+      } else if (place.place_id) {
+        console.log('Detected as place via place_id field')
+        placeId = place.place_id
+      } 
+      // Fall back to checking business-specific fields
+      else {
+        const hasBusinessFields = !!(place.price_range || place.opening_hours || place.email)
+        console.log('Checking business-specific fields:', {
+          price_range: place.price_range,
+          opening_hours: place.opening_hours,
+          email: place.email,
+          hasBusinessFields
+        })
+
+        if (hasBusinessFields) {
+          console.log('Treating as business based on fields')
+          businessId = place.id
+        } else {
+          console.log('Treating as place (default fallback)')
+          placeId = place.id
+        }
+      }
+
+      console.log('Final determination:', { businessId, placeId })
+
       const reviewData = {
-        business_id: place.id,
+        business_id: businessId,
+        place_id: placeId,
         user_id: user.id,
         overall_rating: overallRating,
         accessibility_ratings: accessibilityRatings,

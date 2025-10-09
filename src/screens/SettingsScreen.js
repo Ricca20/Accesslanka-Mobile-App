@@ -4,6 +4,7 @@ import { Text, Card, Switch, List, Divider, Button, SegmentedButtons, Chip, Dial
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useTheme } from "../context/ThemeContext"
 import { useSettings } from "../context/SettingsContext"
+import ChangePasswordModal from "../components/ChangePasswordModal"
 
 export default function SettingsScreen() {
   const { isDarkMode, themeMode, setTheme, currentTheme, systemTheme, accessibilitySettings: themeAccessibilitySettings, updateAccessibilitySettings } = useTheme()
@@ -11,6 +12,7 @@ export default function SettingsScreen() {
   
   const [showLanguageDialog, setShowLanguageDialog] = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
 
   const handleThemeChange = (value) => {
     triggerHapticFeedback('light')
@@ -113,6 +115,18 @@ export default function SettingsScreen() {
       description: "Allow app to access your location",
       key: "locationServices",
       icon: "map-marker",
+    },
+  ]
+
+  const privacyActions = [
+    {
+      title: "Change Password",
+      description: "Update your account password",
+      icon: "lock-reset",
+      onPress: () => {
+        triggerHapticFeedback('light')
+        setShowChangePasswordModal(true)
+      },
     },
   ]
 
@@ -373,6 +387,21 @@ export default function SettingsScreen() {
                 {index < privacySettings.length - 1 && <Divider />}
               </View>
             ))}
+            {privacySettings.length > 0 && <Divider />}
+            {privacyActions.map((item, index) => (
+              <View key={index}>
+                <List.Item
+                  title={item.title}
+                  description={item.description}
+                  left={(props) => <List.Icon {...props} icon={item.icon} />}
+                  right={(props) => <List.Icon {...props} icon="chevron-right" />}
+                  onPress={item.onPress}
+                  style={styles.settingItem}
+                  accessibilityLabel={`${item.title}: ${item.description}`}
+                />
+                {index < privacyActions.length - 1 && <Divider />}
+              </View>
+            ))}
           </Card.Content>
         </Card>
 
@@ -459,6 +488,20 @@ export default function SettingsScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        visible={showChangePasswordModal}
+        onDismiss={() => setShowChangePasswordModal(false)}
+        onSuccess={() => {
+          triggerHapticFeedback('success')
+          Alert.alert(
+            "Password Changed",
+            "Your password has been successfully updated.",
+            [{ text: "OK" }]
+          )
+        }}
+      />
     </SafeAreaView>
   )
 }

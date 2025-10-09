@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { View, StyleSheet, Dimensions, Alert, TouchableOpacity, Platform } from "react-native"
-import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator, FAB } from "react-native-paper"
+import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator, FAB, Chip } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps"
 import * as Location from 'expo-location'
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../../lib/database"
 import { DatabasePlacesService } from "../../services/DatabasePlacesService"
+import AccessibilityService from "../../services/AccessibilityService"
 
 const { width, height } = Dimensions.get("window")
 // Malabe area coordinates (center of Malabe, Sri Lanka)
@@ -44,20 +45,24 @@ export default function ExploreScreen({ navigation }) {
     { key: "government", label: "Services", icon: "city" },
   ]
 
+  // Announce screen when loaded
+  useEffect(() => {
+    AccessibilityService.announce("Explore screen. Search for accessible places or browse the map.", 500)
+  }, [])
+
   // Request location permissions and get user location
   useEffect(() => {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync()
         if (status !== 'granted') {
-          Alert.alert(
-            'Permission Required',
-            'Location permission is needed to show your position and provide directions.',
-            [{ text: 'OK' }]
-          )
+          const message = 'Location permission is needed to show your position and provide directions.'
+          Alert.alert('Permission Required', message, [{ text: 'OK' }])
+          AccessibilityService.announce(message)
           return
         }
 
+        AccessibilityService.announce("Getting your location")
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         })
@@ -68,6 +73,7 @@ export default function ExploreScreen({ navigation }) {
         }
         
         setUserLocation(userCoords)
+        AccessibilityService.announce("Location found. Map centered on your position.")
         
         // Center map on user location
         setRegion({
@@ -77,6 +83,7 @@ export default function ExploreScreen({ navigation }) {
         })
       } catch (error) {
         console.error('Error getting location:', error)
+        AccessibilityService.announce("Unable to get your location")
       }
     })()
   }, [])
@@ -408,18 +415,35 @@ export default function ExploreScreen({ navigation }) {
   }
   
   // Render a place card
-  const renderPlaceCard = (place) => {
+  const renderPlaceCard = (place, index, totalPlaces) => {
     const categoryColor = getCategoryColor(place.category)
+    const features = place.features && place.features.length > 0 
+      ? place.features.slice(0, 2).join(', ') 
+      : 'No accessibility features listed'
+    const verifiedStatus = place.verified ? 'Verified accessible' : 'Not verified'
+    
+    const accessibilityLabel = AccessibilityService.listItemLabel(
+      `${place.name}, ${place.category}, ${place.address}, ${features}, ${verifiedStatus}`,
+      index,
+      totalPlaces
+    )
     
     return (
       <Card
         key={place.id}
         style={styles.placeCard}
-        onPress={() => navigation.navigate("PlaceDetails", { place })}
+        onPress={() => {
+          navigation.navigate("PlaceDetails", { place })
+          AccessibilityService.announce(`Opening ${place.name}`)
+        }}
+        accessible={true}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={AccessibilityService.buttonHint("view place details")}
+        accessibilityRole="button"
       >
         <Card.Content>
-          <View style={styles.placeCardHeader}>
-            <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]}>
+          <View style={styles.placeCardHeader} accessible={false}>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryColor }]} {...AccessibilityService.ignoreProps()}>
               <Icon name={getCategoryIcon(place.category)} size={20} color="#FFFFFF" />
             </View>
             <View style={styles.placeCardInfo}>
@@ -431,7 +455,7 @@ export default function ExploreScreen({ navigation }) {
               </Text>
               {place.features && place.features.length > 0 && (
                 <View style={styles.featuresContainer}>
-                  <Icon name="wheelchair-accessibility" size={14} color="#2E7D32" />
+                  <Icon name="wheelchair-accessibility" size={14} color="#2E7D32" {...AccessibilityService.ignoreProps()} />
                   <Text variant="bodySmall" style={styles.featuresText}>
                     {place.features.slice(0, 2).join(', ')}
                   </Text>
@@ -445,6 +469,7 @@ export default function ExploreScreen({ navigation }) {
                 textStyle={styles.verifiedChipText}
                 icon="check-decagram"
                 compact
+                {...AccessibilityService.ignoreProps()}
               >
                 Verified
               </Chip>
@@ -458,7 +483,10 @@ export default function ExploreScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
+        <View 
+          style={styles.loadingContainer}
+          {...AccessibilityService.loadingProps('accessible places')}
+        >
           <ActivityIndicator size="large" color="#2E7D32" />
           <Text style={styles.loadingText}>Loading accessible places...</Text>
         </View>
@@ -467,39 +495,74 @@ export default function ExploreScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={styles.container}
+      accessible={false}
+    >
       <View style={styles.searchContainer}>
-        <Searchbar
-          placeholder="Search any place worldwide..."
-          onChangeText={handleSearchChange}
-          value={searchQuery}
-          style={styles.searchbar}
-          accessibilityLabel="Search for accessible places"
-          onSubmitEditing={handleSearchSubmit}
-          onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
-          loading={isSearching}
-          right={() => searchQuery ? (
-            <Button onPress={handleClearSearch} compact>
-              Clear
-            </Button>
-          ) : null}
-        />
+        <View
+          accessible={true}
+          accessibilityLabel={searchQuery ? `Search for accessible places. Current text: ${searchQuery}` : "Search for accessible places"}
+          accessibilityHint="Double tap to search for places"
+          accessibilityRole="search"
+        >
+          <Searchbar
+            placeholder="Search for accessible places"
+            onChangeText={handleSearchChange}
+            value={searchQuery}
+            style={styles.searchbar}
+            onSubmitEditing={handleSearchSubmit}
+            onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
+            loading={isSearching}
+            importantForAccessibility="no-hide-descendants"
+            right={() => searchQuery ? (
+              <Button 
+                onPress={handleClearSearch} 
+                compact
+                accessibilityLabel="Clear search"
+                accessibilityHint={AccessibilityService.buttonHint("clear search text")}
+                accessibilityRole="button"
+              >
+                Clear
+              </Button>
+            ) : null}
+          />
+        </View>
         
         {/* Search suggestions */}
         {showSuggestions && searchSuggestions.length > 0 && (
-          <Card style={styles.suggestionsCard}>
+          <Card 
+            style={styles.suggestionsCard}
+            accessible={true}
+            accessibilityLabel={`${searchSuggestions.length} search suggestions available`}
+            accessibilityRole="menu"
+          >
             <Card.Content style={styles.suggestionsContent}>
               {searchSuggestions.map((suggestion, index) => (
                 <View key={index}>
-                  <TouchableOpacity onPress={() => handleSuggestionPress(suggestion)}>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      handleSuggestionPress(suggestion)
+                      AccessibilityService.announce(`Selected ${suggestion.text}`)
+                    }}
+                    accessible={true}
+                    accessibilityLabel={AccessibilityService.listItemLabel(
+                      `${suggestion.text}. ${suggestion.subtitle}`,
+                      index,
+                      searchSuggestions.length
+                    )}
+                    accessibilityHint={AccessibilityService.buttonHint(`select ${suggestion.text}`)}
+                    accessibilityRole="menuitem"
+                  >
                     <List.Item
                       title={suggestion.text}
                       description={suggestion.subtitle}
-                      left={(props) => <List.Icon {...props} icon={suggestion.icon} />}
+                      left={(props) => <List.Icon {...props} icon={suggestion.icon} {...AccessibilityService.ignoreProps()} />}
                       style={styles.suggestionItem}
+                      accessible={false}
                     />
                   </TouchableOpacity>
-                  {index < searchSuggestions.length - 1 && <Divider />}
+                  {index < searchSuggestions.length - 1 && <Divider {...AccessibilityService.ignoreProps()} />}
                 </View>
               ))}
             </Card.Content>
@@ -508,16 +571,21 @@ export default function ExploreScreen({ navigation }) {
       </View>
 
       {/* Map View */}
-      <View style={styles.mapContainer}>
+      <View 
+        style={styles.mapContainer}
+        accessible={false}
+      >
         <MapView
           ref={mapRef}
           style={styles.map}
           initialRegion={region}
           showsUserLocation={true}
           showsMyLocationButton={true}
+          accessible={false}
+          accessibilityElementsHidden={true}
         >
           {/* Render markers for all places */}
-          {filteredPlaces.map((place) => (
+          {filteredPlaces.map((place, index) => (
             <Marker
               key={place.id}
               coordinate={{
@@ -526,7 +594,14 @@ export default function ExploreScreen({ navigation }) {
               }}
               title={place.name}
               description={`${place.address} - Tap to view details`}
-              onPress={() => handleMarkerPress(place)}
+              onPress={() => {
+                handleMarkerPress(place)
+                AccessibilityService.announce(`Opening ${place.name}`)
+              }}
+              accessible={true}
+              accessibilityLabel={AccessibilityService.markerLabel(place.name, place.category)}
+              accessibilityHint={AccessibilityService.markerHint()}
+              accessibilityRole="button"
             >
               <View style={[
                 styles.markerContainer,
@@ -544,13 +619,25 @@ export default function ExploreScreen({ navigation }) {
       </View>
       
       {/* Floating AI Assistant Button */}
-      <FAB
-        icon="robot"
-        style={styles.fab}
-        onPress={() => navigation.navigate('Chatbot')}
-        label="AI Assistant"
-        color="#FFFFFF"
-      />
+      <View
+        style={styles.fabContainer}
+        accessible={true}
+        accessibilityLabel="AI Assistant button"
+        accessibilityHint="Double tap to open AI chatbot assistant"
+        accessibilityRole="button"
+      >
+        <FAB
+          icon="robot"
+          style={styles.fab}
+          onPress={() => {
+            navigation.navigate('Chatbot')
+            AccessibilityService.announceNavigation('AI Assistant')
+          }}
+          label="AI Assistant"
+          color="#FFFFFF"
+          importantForAccessibility="no-hide-descendants"
+        />
+      </View>
     </SafeAreaView>
   )
 }
@@ -608,11 +695,13 @@ const styles = StyleSheet.create({
   selectedMarker: {
     transform: [{ scale: 1.2 }],
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
     margin: 16,
     right: 0,
     bottom: 0,
+  },
+  fab: {
     backgroundColor: '#2E7D32',
   },
 })

@@ -1,11 +1,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { createStackNavigator } from "@react-navigation/stack"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
+import AccessibilityService from "../services/AccessibilityService"
 
 import ExploreScreen from "../screens/main/ExploreScreen"
-import ReviewsScreen from "../screens/main/ReviewsScreen"
 import MapMissionScreen from "../screens/main/MapMissionScreen"
-import BusinessesScreen from "../screens/main/BusinessesScreen"
 import CommunityScreen from "../screens/main/CommunityScreen"
 import ChatbotScreen from "../screens/ChatbotScreen"
 import PlaceDetailsScreen from "../screens/PlaceDetailsScreen"
@@ -20,12 +19,7 @@ import MyFavoritesScreen from "../screens/MyFavoritesScreen"
 import AddMyBusinessScreen from "../screens/AddMyBusinessScreen"
 import MyBusinessSubmissionsScreen from "../screens/MyBusinessSubmissionsScreen"
 import CreateMapMissionScreen from "../screens/CreateMapMissionScreen"
-<<<<<<< HEAD
-
-=======
 import AccessibilityContributionScreen from "../screens/AccessibilityContributionScreen"
-import DatabaseTestScreen from "../screens/DatabaseTestScreen"
->>>>>>> User-Feedback-Management
 
 const Tab = createBottomTabNavigator()
 const Stack = createStackNavigator()
@@ -87,14 +81,8 @@ export default function MainTabNavigator() {
             case "Explore":
               iconName = focused ? "map-search" : "map-search-outline"
               break
-            case "Reviews":
-              iconName = focused ? "star" : "star-outline"
-              break
             case "MapMission":
               iconName = focused ? "map-marker" : "map-marker-outline"
-              break
-            case "Businesses":
-              iconName = focused ? "store" : "store-outline"
               break
             case "Community":
               iconName = focused ? "forum" : "forum-outline"
@@ -104,19 +92,63 @@ export default function MainTabNavigator() {
               break
           }
 
-          return <Icon name={iconName} size={size} color={color} />
+          return (
+            <Icon 
+              name={iconName} 
+              size={size} 
+              color={color}
+              accessible={false}
+              importantForAccessibility="no"
+            />
+          )
         },
         tabBarActiveTintColor: "#2E7D32",
         tabBarInactiveTintColor: "gray",
         headerShown: false,
+        tabBarAccessibilityLabel: route.name,
       })}
+      screenListeners={{
+        state: (e) => {
+          // Announce navigation changes for screen readers
+          const currentRoute = e.data?.state?.routes[e.data?.state?.index]
+          if (currentRoute) {
+            AccessibilityService.announceNavigation(currentRoute.name)
+          }
+        }
+      }}
     >
-      <Tab.Screen name="Explore" component={ExploreStack} />
-      <Tab.Screen name="Reviews" component={ReviewsScreen} />
-      <Tab.Screen name="MapMission" component={MapMissionStack} />
-      <Tab.Screen name="Businesses" component={BusinessesScreen} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
-      <Tab.Screen name="Profile" component={ProfileStack} />
+      <Tab.Screen 
+        name="Explore" 
+        component={ExploreStack}
+        options={{
+          tabBarAccessibilityLabel: AccessibilityService.navItemLabel("Explore"),
+          tabBarAccessibilityHint: AccessibilityService.buttonHint("view explore screen and search for accessible places"),
+        }}
+      />
+      <Tab.Screen 
+        name="MapMission" 
+        component={MapMissionStack}
+        options={{
+          tabBarAccessibilityLabel: AccessibilityService.navItemLabel("Map Mission"),
+          tabBarAccessibilityHint: AccessibilityService.buttonHint("view map missions and contribute accessibility information"),
+        }}
+      />
+      <Tab.Screen 
+        name="Community" 
+        component={CommunityScreen}
+        options={{
+          tabBarAccessibilityLabel: AccessibilityService.navItemLabel("Community"),
+          tabBarAccessibilityHint: AccessibilityService.buttonHint("view community posts and discussions"),
+        }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileStack}
+        options={{
+          tabBarAccessibilityLabel: AccessibilityService.navItemLabel("Profile"),
+          tabBarAccessibilityHint: AccessibilityService.buttonHint("view your profile and settings"),
+        }}
+      />
     </Tab.Navigator>
   )
 }

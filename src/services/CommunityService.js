@@ -103,41 +103,45 @@ export class CommunityService {
    */
   static async getUserInfo(userId) {
     try {
-      // Try to get user metadata from auth.users
-      const { data: { user }, error } = await supabase.auth.admin.getUserById(userId)
+      // Query the users table directly
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('full_name, email, avatar_url')
+        .eq('id', userId)
+        .maybeSingle() // Use maybeSingle instead of single to avoid errors when no rows found
       
-      if (error || !user) {
-        // Fallback: try to get current user if it's the same
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-        if (currentUser && currentUser.id === userId) {
-          const name = currentUser.user_metadata?.full_name || 
-                      currentUser.user_metadata?.name || 
-                      currentUser.email?.split('@')[0] || 
-                      'Anonymous User'
-          return {
-            name,
-            avatar: currentUser.user_metadata?.avatar_url || null,
-            initials: this.getInitials(name),
-          }
-        }
+      if (!profileError && userProfile) {
+        const name = userProfile.full_name || 
+                    userProfile.email?.split('@')[0] || 
+                    'Anonymous User'
         
-        // Final fallback
         return {
-          name: 'Anonymous User',
-          avatar: null,
-          initials: 'AU',
+          name,
+          avatar: userProfile.avatar_url || null,
+          initials: this.getInitials(name),
         }
       }
 
-      const name = user.user_metadata?.full_name || 
-                  user.user_metadata?.name || 
-                  user.email?.split('@')[0] || 
-                  'Anonymous User'
+      // Fallback: try to get current user if it's the same
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
       
+      if (currentUser && currentUser.id === userId) {
+        const name = currentUser.user_metadata?.full_name || 
+                    currentUser.user_metadata?.name || 
+                    currentUser.email?.split('@')[0] || 
+                    'Anonymous User'
+        return {
+          name,
+          avatar: currentUser.user_metadata?.avatar_url || null,
+          initials: this.getInitials(name),
+        }
+      }
+      
+      // Final fallback
       return {
-        name,
-        avatar: user.user_metadata?.avatar_url || null,
-        initials: this.getInitials(name),
+        name: 'Anonymous User',
+        avatar: null,
+        initials: 'AU',
       }
     } catch (error) {
       console.error('Error fetching user info:', error)

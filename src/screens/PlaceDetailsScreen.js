@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../lib/database"
+import { useAuth } from "../context/AuthContext"
 
 const { width } = Dimensions.get("window")
 const IMAGE_WIDTH = width
@@ -12,6 +13,7 @@ const IMAGE_HEIGHT = 250
 
 export default function PlaceDetailsScreen({ route = { params: {} }, navigation = {} }) {
   const { place, missionId } = route.params
+  const { user } = useAuth()
   const [isFavorite, setIsFavorite] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [reviews, setReviews] = useState([])
@@ -75,6 +77,13 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
     images: placeData.images,
   })
 
+  // Check if place is already favorited
+  useEffect(() => {
+    if (user?.id && place?.id) {
+      checkFavoriteStatus()
+    }
+  }, [user?.id, place?.id])
+
   // Fetch reviews for this place
   useEffect(() => {
     fetchReviews()
@@ -92,13 +101,133 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
     }, [place.id])
   )
 
+  const checkFavoriteStatus = async () => {
+    try {
+      // Determine if this is a business or place based on the type field or explicit IDs
+      let businessId = null
+      let placeId = null
+      
+      if (place.business_id) {
+        businessId = place.business_id
+      } else if (place.place_id) {
+        placeId = place.place_id
+      } else if (place.type === 'business') {
+        businessId = place.id
+      } else if (place.type === 'place') {
+        placeId = place.id
+      } else {
+        // Default to place if type is not specified
+        placeId = place.id
+      }
+      
+      const favoriteStatus = await DatabaseService.isFavorite(user.id, businessId, placeId)
+      setIsFavorite(favoriteStatus)
+    } catch (error) {
+      console.error('Error checking favorite status:', error)
+    }
+  }
+
+  const toggleFavorite = async () => {
+    if (!user?.id) {
+      Alert.alert('Login Required', 'Please login to save favorites.')
+      return
+    }
+
+    try {
+      // Determine if this is a business or place based on the type field or explicit IDs
+      let businessId = null
+      let placeId = null
+      
+      if (place.business_id) {
+        businessId = place.business_id
+      } else if (place.place_id) {
+        placeId = place.place_id
+      } else if (place.type === 'business') {
+        businessId = place.id
+      } else if (place.type === 'place') {
+        placeId = place.id
+      } else {
+        // Default to place if type is not specified
+        placeId = place.id
+      }
+      
+      if (isFavorite) {
+        // Remove from favorites
+        await DatabaseService.removeFromFavorites(user.id, businessId, placeId)
+        setIsFavorite(false)
+        Alert.alert('Success', 'Removed from favorites')
+      } else {
+        // Add to favorites
+        await DatabaseService.addToFavorites(user.id, businessId, placeId)
+        setIsFavorite(true)
+        Alert.alert('Success', 'Added to favorites')
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+      Alert.alert('Error', 'Failed to update favorites. Please try again.')
+    }
+  }
+
   const fetchReviews = async () => {
     try {
       setLoadingReviews(true)
-      console.log('Fetching reviews for business ID:', place.id)
-      const reviewsData = await DatabaseService.getReviews({ businessId: place.id })
+      
+      console.log('fetchReviews - place object:', {
+        id: place.id,
+        name: place.name,
+        type: place.type,
+        business_id: place.business_id,
+        place_id: place.place_id,
+        price_range: place.price_range,
+        opening_hours: place.opening_hours,
+        email: place.email
+      })
+
+      // Determine if this is a business or a place (same logic as AddReviewScreen)
+      let businessId = null
+      let placeId = null
+
+      // Priority 1: Check explicit type field (from ExploreScreen normalization)
+      if (place.type === 'business') {
+        console.log('Detected as business via type field')
+        businessId = place.id
+      } else if (place.type === 'place') {
+        console.log('Detected as place via type field')
+        placeId = place.id
+      } 
+      // Priority 2: Check explicit ID markers
+      else if (place.business_id) {
+        console.log('Detected as business via business_id field')
+        businessId = place.business_id
+      } else if (place.place_id) {
+        console.log('Detected as place via place_id field')
+        placeId = place.place_id
+      } 
+      // Priority 3: Check business-specific fields
+      else {
+        const hasBusinessFields = !!(place.price_range || place.opening_hours || place.email)
+        console.log('Checking business-specific fields:', {
+          price_range: place.price_range,
+          opening_hours: place.opening_hours,
+          email: place.email,
+          hasBusinessFields
+        })
+
+        if (hasBusinessFields) {
+          console.log('Treating as business based on fields')
+          businessId = place.id
+        } else {
+          console.log('Treating as place (default fallback)')
+          placeId = place.id
+        }
+      }
+
+      console.log('Fetching reviews for:', { businessId, placeId, placeName: place.name })
+      const reviewsData = await DatabaseService.getReviews({ businessId, placeId })
       console.log('Fetched reviews:', reviewsData?.length || 0, 'reviews')
-      console.log('First review structure:', JSON.stringify(reviewsData?.[0], null, 2))
+      if (reviewsData && reviewsData.length > 0) {
+        console.log('First review structure:', JSON.stringify(reviewsData[0], null, 2))
+      }
       setReviews(reviewsData || [])
     } catch (error) {
       console.error('Error fetching reviews:', error)
@@ -364,7 +493,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
             <Button
               mode="contained-tonal"
               icon={isFavorite ? "heart" : "heart-outline"}
-              onPress={() => setIsFavorite(!isFavorite)}
+              onPress={toggleFavorite}
               style={styles.favoriteButton}
               accessibilityLabel={isFavorite ? "Remove from favorites" : "Add to favorites"}
             >
@@ -781,7 +910,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                 mode="contained"
                 icon="star-plus"
                 compact
-                onPress={() => navigation.navigate('AddReview', { place: placeData })}
+                onPress={() => navigation.navigate('AddReview', { place: place })}
                 style={styles.addReviewButton}
               >
                 Add Review
@@ -810,7 +939,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                   mode="contained"
                   icon="star-plus"
                   style={styles.emptyReviewsButton}
-                  onPress={() => navigation.navigate('AddReview', { place: placeData })}
+                  onPress={() => navigation.navigate('AddReview', { place: place })}
                 >
                   Write First Review
                 </Button>

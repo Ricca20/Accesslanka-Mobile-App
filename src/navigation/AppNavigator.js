@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { createStackNavigator } from "@react-navigation/stack"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { ActivityIndicator, View } from "react-native"
+import { ActivityIndicator, View, Text } from "react-native"
+import AccessibilityService from "../services/AccessibilityService"
 
 import OnboardingScreen from "../screens/OnboardingScreen"
 import LandingScreen from "../screens/LandingScreen"
@@ -35,8 +36,18 @@ export default function AppNavigator() {
   // Show loading screen while checking auth status and onboarding
   if (loading || hasSeenOnboarding === null) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View 
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+        {...AccessibilityService.loadingProps('application')}
+      >
         <ActivityIndicator size="large" color="#2E7D32" />
+        <Text 
+          style={{ marginTop: 16 }}
+          accessible={true}
+          accessibilityLabel="Loading application, please wait"
+        >
+          Loading...
+        </Text>
       </View>
     )
   }

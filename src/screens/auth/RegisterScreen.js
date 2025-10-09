@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { View, StyleSheet, ScrollView, Alert } from "react-native"
 import { Text, TextInput, Button, Card, Checkbox } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useAuth } from "../../context/AuthContext"
+import AccessibilityService from "../../services/AccessibilityService"
 
 export default function RegisterScreen({ navigation }) {
   const { signUp } = useAuth()
@@ -21,32 +22,46 @@ export default function RegisterScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  useEffect(() => {
+    // Announce screen name when component mounts
+    AccessibilityService.announce("Register screen. Create a new account to help build a more accessible Sri Lanka.", 500)
+  }, [])
+
   const handleRegister = async () => {
     try {
       setLoading(true)
+      AccessibilityService.announce("Creating account, please wait")
 
       // Validation
       if (!formData.name || !formData.email || !formData.password) {
-        Alert.alert("Error", "Please fill in all required fields")
+        const errorMsg = "Please fill in all required fields"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Form", errorMsg)
         return
       }
 
       if (formData.password !== formData.confirmPassword) {
-        Alert.alert("Error", "Passwords do not match")
+        const errorMsg = "Passwords do not match"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Password", errorMsg)
         return
       }
 
       if (formData.password.length < 6) {
-        Alert.alert("Error", "Password must be at least 6 characters")
+        const errorMsg = "Password must be at least 6 characters"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Password", errorMsg)
         return
       }
 
       // Sign up user
       await signUp(formData.email, formData.password, formData.name)
 
+      const successMsg = "Account created successfully! Please check your email to verify your account."
+      AccessibilityService.announceSuccess(successMsg)
       Alert.alert(
         "Success",
-        "Account created successfully! Please check your email to verify your account.",
+        successMsg,
         [
           {
             text: "OK",
@@ -56,7 +71,9 @@ export default function RegisterScreen({ navigation }) {
       )
     } catch (error) {
       console.error("Registration error:", error)
-      Alert.alert("Error", error.message || "Failed to create account")
+      const errorMsg = error.message || "Failed to create account"
+      Alert.alert("Error", errorMsg)
+      AccessibilityService.announceFormError("Registration", errorMsg)
     } finally {
       setLoading(false)
     }
@@ -67,13 +84,27 @@ export default function RegisterScreen({ navigation }) {
   }
 
   const updateDisabilities = (field) => {
-    setDisabilities((prev) => ({ ...prev, [field]: !prev[field] }))
+    const newState = !disabilities[field]
+    setDisabilities((prev) => ({ ...prev, [field]: newState }))
+    AccessibilityService.announce(`${field} accessibility ${newState ? 'selected' : 'unselected'}`)
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
+    <SafeAreaView 
+      style={styles.container}
+      accessible={true}
+      accessibilityLabel="Register screen"
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        accessible={false}
+      >
+        <View 
+          style={styles.header}
+          accessible={true}
+          accessibilityRole="header"
+          accessibilityLabel="Join AccessLanka. Help build a more accessible Sri Lanka"
+        >
           <Text variant="headlineLarge" style={styles.title}>
             Join AccessLanka
           </Text>
@@ -82,7 +113,7 @@ export default function RegisterScreen({ navigation }) {
           </Text>
         </View>
 
-        <Card style={styles.card}>
+        <Card style={styles.card} accessible={false}>
           <Card.Content style={styles.cardContent}>
             <TextInput
               label="Full Name"
@@ -90,7 +121,9 @@ export default function RegisterScreen({ navigation }) {
               onChangeText={(value) => updateFormData("name", value)}
               mode="outlined"
               style={styles.input}
-              accessibilityLabel="Full name input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Full name", true, formData.name)}
+              accessibilityHint="Enter your full name"
+              accessibilityRole="none"
             />
 
             <TextInput
@@ -101,7 +134,9 @@ export default function RegisterScreen({ navigation }) {
               keyboardType="email-address"
               autoCapitalize="none"
               style={styles.input}
-              accessibilityLabel="Email input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Email", true, formData.email)}
+              accessibilityHint="Enter your email address"
+              accessibilityRole="none"
             />
 
             <TextInput
@@ -114,11 +149,18 @@ export default function RegisterScreen({ navigation }) {
               right={
                 <TextInput.Icon
                   icon={showPassword ? "eye-off" : "eye"}
-                  onPress={() => setShowPassword(!showPassword)}
+                  onPress={() => {
+                    setShowPassword(!showPassword)
+                    AccessibilityService.announce(showPassword ? "Password hidden" : "Password visible")
+                  }}
                   accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  accessibilityHint={AccessibilityService.buttonHint(showPassword ? "hide password" : "show password")}
+                  accessibilityRole="button"
                 />
               }
-              accessibilityLabel="Password input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Password", true)}
+              accessibilityHint="Enter a password, at least 6 characters"
+              accessibilityRole="none"
             />
 
             <TextInput
@@ -128,40 +170,56 @@ export default function RegisterScreen({ navigation }) {
               mode="outlined"
               secureTextEntry={!showPassword}
               style={styles.input}
-              accessibilityLabel="Confirm password input field"
+              accessibilityLabel={AccessibilityService.inputLabel("Confirm password", true)}
+              accessibilityHint="Re-enter your password"
+              accessibilityRole="none"
             />
 
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Accessibility Preferences (Optional)
-            </Text>
-            <Text variant="bodySmall" style={styles.sectionSubtitle}>
-              Help us personalize your experience
-            </Text>
+            <View
+              accessible={true}
+              accessibilityRole="header"
+              accessibilityLabel="Accessibility Preferences section. Optional. Help us personalize your experience"
+            >
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Accessibility Preferences (Optional)
+              </Text>
+              <Text variant="bodySmall" style={styles.sectionSubtitle}>
+                Help us personalize your experience
+              </Text>
+            </View>
 
-            <View style={styles.checkboxContainer}>
+            <View style={styles.checkboxContainer} accessible={false}>
               <Checkbox.Item
                 label="Mobility accessibility"
                 status={disabilities.mobility ? "checked" : "unchecked"}
                 onPress={() => updateDisabilities("mobility")}
-                accessibilityLabel="Mobility accessibility preference"
+                accessibilityLabel={`Mobility accessibility preference, ${disabilities.mobility ? 'checked' : 'unchecked'}`}
+                accessibilityHint={AccessibilityService.buttonHint(disabilities.mobility ? 'unselect mobility accessibility' : 'select mobility accessibility')}
+                accessibilityRole="checkbox"
               />
               <Checkbox.Item
                 label="Visual accessibility"
                 status={disabilities.visual ? "checked" : "unchecked"}
                 onPress={() => updateDisabilities("visual")}
-                accessibilityLabel="Visual accessibility preference"
+                accessibilityLabel={`Visual accessibility preference, ${disabilities.visual ? 'checked' : 'unchecked'}`}
+                accessibilityHint={AccessibilityService.buttonHint(disabilities.visual ? 'unselect visual accessibility' : 'select visual accessibility')}
+                accessibilityRole="checkbox"
               />
               <Checkbox.Item
                 label="Hearing accessibility"
                 status={disabilities.hearing ? "checked" : "unchecked"}
                 onPress={() => updateDisabilities("hearing")}
-                accessibilityLabel="Hearing accessibility preference"
+                accessibilityLabel={`Hearing accessibility preference, ${disabilities.hearing ? 'checked' : 'unchecked'}`}
+                accessibilityHint={AccessibilityService.buttonHint(disabilities.hearing ? 'unselect hearing accessibility' : 'select hearing accessibility')}
+                accessibilityRole="checkbox"
               />
               <Checkbox.Item
                 label="Cognitive accessibility"
                 status={disabilities.cognitive ? "checked" : "unchecked"}
                 onPress={() => updateDisabilities("cognitive")}
-                accessibilityLabel="Cognitive accessibility preference"
+                accessibilityLabel={`Cognitive accessibility preference, ${disabilities.cognitive ? 'checked' : 'unchecked'}`}
+                accessibilityHint={AccessibilityService.buttonHint(disabilities.cognitive ? 'unselect cognitive accessibility' : 'select cognitive accessibility')}
+                accessibilityRole="checkbox"
               />
             </View>
 
@@ -169,7 +227,10 @@ export default function RegisterScreen({ navigation }) {
               mode="contained"
               onPress={handleRegister}
               style={styles.registerButton}
-              accessibilityLabel="Create account button"
+              accessibilityLabel={loading ? "Creating account, please wait" : "Create account"}
+              accessibilityHint={loading ? "" : AccessibilityService.buttonHint("create your new account")}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: loading, busy: loading }}
               loading={loading}
               disabled={loading}
             >
@@ -178,9 +239,23 @@ export default function RegisterScreen({ navigation }) {
           </Card.Content>
         </Card>
 
-        <View style={styles.footer}>
+        <View 
+          style={styles.footer}
+          accessible={true}
+          accessibilityLabel="Already have an account? Login"
+          accessibilityRole="none"
+        >
           <Text variant="bodyMedium">Already have an account? </Text>
-          <Button mode="text" onPress={() => navigation.navigate("Login")} accessibilityLabel="Go to login">
+          <Button 
+            mode="text" 
+            onPress={() => {
+              navigation.navigate("Login")
+              AccessibilityService.announceNavigation("Login")
+            }}
+            accessibilityLabel="Login"
+            accessibilityHint={AccessibilityService.buttonHint("go to login screen")}
+            accessibilityRole="button"
+          >
             Login
           </Button>
         </View>

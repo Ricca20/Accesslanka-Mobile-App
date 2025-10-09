@@ -5,6 +5,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../context/AuthContext"
 import { useEffect, useState } from "react"
 import { DatabaseService } from "../lib/database"
+import AccessibilityService from "../services/AccessibilityService"
 
 export default function ProfileScreen({ navigation }) {
   const { user, signOut, loading } = useAuth()
@@ -14,6 +15,11 @@ export default function ProfileScreen({ navigation }) {
     favoritesCount: 0,
     helpfulVotes: 0,
   })
+
+  useEffect(() => {
+    // Announce screen when loaded
+    AccessibilityService.announce("Profile screen. View your profile and account settings.", 500)
+  }, [])
 
   useEffect(() => {
     if (user?.id) {
@@ -274,20 +280,26 @@ export default function ProfileScreen({ navigation }) {
         </Card>
 
         {/* Menu Items */}
-        <Card style={styles.menuCard}>
+        <Card style={styles.menuCard} accessible={false}>
           <Card.Content style={styles.menuContent}>
             {menuItems.map((item, index) => (
               <View key={index}>
                 <List.Item
                   title={item.title}
                   description={item.description}
-                  left={(props) => <List.Icon {...props} icon={item.icon} />}
-                  right={(props) => <List.Icon {...props} icon="chevron-right" />}
-                  onPress={item.onPress}
+                  left={(props) => <List.Icon {...props} icon={item.icon} {...AccessibilityService.ignoreProps()} />}
+                  right={(props) => <List.Icon {...props} icon="chevron-right" {...AccessibilityService.ignoreProps()} />}
+                  onPress={() => {
+                    item.onPress()
+                    AccessibilityService.announce(`Opening ${item.title}`)
+                  }}
                   style={styles.menuItem}
-                  accessibilityLabel={`${item.title}: ${item.description}`}
+                  accessible={true}
+                  accessibilityLabel={AccessibilityService.listItemLabel(`${item.title}. ${item.description}`, index, menuItems.length)}
+                  accessibilityHint={AccessibilityService.buttonHint(`open ${item.title}`)}
+                  accessibilityRole="button"
                 />
-                {index < menuItems.length - 1 && <Divider />}
+                {index < menuItems.length - 1 && <Divider {...AccessibilityService.ignoreProps()} />}
               </View>
             ))}
           </Card.Content>
@@ -300,7 +312,9 @@ export default function ProfileScreen({ navigation }) {
             icon="logout"
             onPress={handleSignOut}
             style={styles.signOutButton}
-            accessibilityLabel="Sign out of account"
+            accessibilityLabel="Sign out"
+            accessibilityHint={AccessibilityService.buttonHint("sign out of your account")}
+            accessibilityRole="button"
           >
             Sign Out
           </Button>
