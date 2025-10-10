@@ -141,9 +141,7 @@ export default function CommunityScreen() {
   const categories = [
     { key: "all", label: "All" },
     { key: "questions", label: "Questions" },
-    { key: "reviews", label: "Reviews" },
     { key: "tips", label: "Tips" },
-    { key: "events", label: "Events" },
     { key: "discussion", label: "Discussion" },
   ]
 
@@ -151,12 +149,8 @@ export default function CommunityScreen() {
     switch (category) {
       case "questions":
         return "help-circle"
-      case "reviews":
-        return "star"
       case "tips":
         return "lightbulb"
-      case "events":
-        return "calendar"
       default:
         return "forum"
     }
@@ -166,14 +160,10 @@ export default function CommunityScreen() {
     switch (category) {
       case "questions":
         return "#2196F3"
-      case "reviews":
-        return "#FF9800"
       case "tips":
         return "#4CAF50"
-      case "events":
-        return "#9C27B0"
       default:
-        return "#666"
+        return "#FF9800"
     }
   }
 
@@ -183,41 +173,46 @@ export default function CommunityScreen() {
 
     return (
       <Card style={styles.postCard} onPress={() => handleOpenPost(item.id)}>
-        <Card.Content>
+        <Card.Content style={styles.postCardContent}>
           <View style={styles.postHeader}>
             <View style={styles.authorInfo}>
-              {item.authorAvatar ? (
-                <Avatar.Image size={36} source={{ uri: item.authorAvatar }} />
-              ) : (
-                <Avatar.Text size={36} label={item.authorInitials} />
-              )}
+              <View style={styles.avatarContainer}>
+                {item.authorAvatar ? (
+                  <Avatar.Image size={44} source={{ uri: item.authorAvatar }} />
+                ) : (
+                  <Avatar.Text size={44} label={item.authorInitials} style={styles.avatarText} />
+                )}
+              </View>
               <View style={styles.authorDetails}>
                 <View style={styles.authorNameRow}>
-                  <Text variant="titleSmall">{item.author}</Text>
+                  <Text variant="titleSmall" style={styles.authorName}>{item.author}</Text>
                   <UserBadge userId={item.authorId} size="tiny" />
                 </View>
-                <Text variant="bodySmall" style={styles.timeText}>
-                  {CommunityService.getTimeAgo(item.created_at)}
-                </Text>
+                <View style={styles.postMetaRow}>
+                  <Icon name="clock-outline" size={12} color="#999" />
+                  <Text variant="bodySmall" style={styles.timeText}>
+                    {CommunityService.getTimeAgo(item.created_at)}
+                  </Text>
+                </View>
               </View>
             </View>
-            <Chip
-              icon={getCategoryIcon(item.category)}
-              style={[styles.categoryChip, { backgroundColor: getCategoryColor(item.category) + "20" }]}
-              textStyle={{ color: getCategoryColor(item.category) }}
-              compact
-            >
-              {item.category}
-            </Chip>
+            <View style={styles.categoryBadge}>
+              <Icon name={getCategoryIcon(item.category)} size={14} color={getCategoryColor(item.category)} />
+              <Text style={[styles.categoryBadgeText, { color: getCategoryColor(item.category) }]}>
+                {item.category}
+              </Text>
+            </View>
           </View>
 
-          <Text variant="titleMedium" style={styles.postTitle}>
-            {item.title}
-          </Text>
+          <View style={styles.postContent}>
+            <Text variant="titleMedium" style={styles.postTitle}>
+              {item.title}
+            </Text>
 
-          <Text variant="bodyMedium" style={styles.postSnippet}>
-            {snippet}
-          </Text>
+            <Text variant="bodyMedium" style={styles.postSnippet}>
+              {snippet}
+            </Text>
+          </View>
 
           {item.image_urls && item.image_urls.length > 0 && (
             <View style={styles.imageContainer}>
@@ -245,19 +240,25 @@ export default function CommunityScreen() {
           <View style={styles.postActions}>
             <View style={styles.engagementStats}>
               <View style={styles.statItem}>
-                <Icon name="thumb-up" size={16} color="#666" />
+                <View style={[styles.statIconContainer, { backgroundColor: '#E8F5E9' }]}>
+                  <Icon name="thumb-up" size={14} color="#2E7D32" />
+                </View>
                 <Text variant="bodySmall" style={styles.statText}>
                   {item.upvotes_count || 0}
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Icon name="comment" size={16} color="#666" />
+                <View style={[styles.statIconContainer, { backgroundColor: '#E3F2FD' }]}>
+                  <Icon name="comment" size={14} color="#2196F3" />
+                </View>
                 <Text variant="bodySmall" style={styles.statText}>
                   {item.comments_count || 0}
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Icon name="eye" size={16} color="#666" />
+                <View style={[styles.statIconContainer, { backgroundColor: '#FFF3E0' }]}>
+                  <Icon name="eye" size={14} color="#FF9800" />
+                </View>
                 <Text variant="bodySmall" style={styles.statText}>
                   {item.views_count || 0}
                 </Text>
@@ -266,24 +267,41 @@ export default function CommunityScreen() {
 
             <View style={styles.actionButtons}>
               <Button 
-                mode="text" 
+                mode={isLiked ? "contained-tonal" : "outlined"}
                 icon={isLiked ? "thumb-up" : "thumb-up-outline"} 
                 compact
                 onPress={(e) => {
                   e.stopPropagation()
                   handleToggleLike(item.id)
                 }}
-                textColor={isLiked ? "#2E7D32" : undefined}
+                buttonColor={isLiked ? "#E8F5E9" : undefined}
+                textColor={isLiked ? "#2E7D32" : "#666"}
+                style={styles.actionButton}
               >
                 {isLiked ? "Liked" : "Like"}
               </Button>
               <Button 
-                mode="text" 
+                mode="outlined" 
                 icon="comment-outline" 
                 compact
                 onPress={() => handleOpenPost(item.id)}
+                textColor="#666"
+                style={styles.actionButton}
               >
                 Comment
+              </Button>
+              <Button 
+                mode="outlined" 
+                icon="share-variant" 
+                compact
+                onPress={(e) => {
+                  e.stopPropagation()
+                  showSnackbar('Share feature coming soon!')
+                }}
+                textColor="#666"
+                style={styles.actionButton}
+              >
+                Share
               </Button>
             </View>
           </View>
@@ -294,8 +312,10 @@ export default function CommunityScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="forum-outline" size={64} color="#CCC" />
-      <Text variant="titleMedium" style={styles.emptyTitle}>
+      <View style={styles.emptyIconContainer}>
+        <Icon name="forum-outline" size={56} color="#2E7D32" />
+      </View>
+      <Text variant="headlineSmall" style={styles.emptyTitle}>
         No posts yet
       </Text>
       <Text variant="bodyMedium" style={styles.emptySubtitle}>
@@ -304,11 +324,12 @@ export default function CommunityScreen() {
       {user && (
         <Button
           mode="contained"
-          icon="plus"
+          icon="pencil"
           onPress={() => setCreateModalVisible(true)}
           style={styles.emptyButton}
+          labelStyle={styles.emptyButtonLabel}
         >
-          Create Post
+          Create Your First Post
         </Button>
       )}
     </View>
@@ -317,32 +338,59 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text variant="headlineSmall" style={styles.title}>
-          Community
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          Connect, share experiences, and help each other
-        </Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerIconContainer}>
+            <Icon name="account-group" size={28} color="#2E7D32" />
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text variant="headlineSmall" style={styles.title}>
+              Community
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              Connect, share experiences, and help each other
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.filterContainer}>
-          {categories.map((category) => (
-            <Chip
-              key={category.key}
-              selected={selectedCategory === category.key}
-              onPress={() => handleCategoryChange(category.key)}
-              style={styles.filterChip}
-              accessibilityLabel={`Filter by ${category.label} posts`}
-            >
-              {category.label}
-            </Chip>
-          ))}
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category.key
+            return (
+              <Chip
+                key={category.key}
+                selected={isSelected}
+                onPress={() => handleCategoryChange(category.key)}
+                style={[
+                  styles.filterChip,
+                  isSelected && styles.filterChipSelected
+                ]}
+                textStyle={[
+                  styles.filterChipText,
+                  isSelected && styles.filterChipTextSelected
+                ]}
+                icon={() => (
+                  <Icon 
+                    name={category.key === 'all' ? 'view-grid' : category.key === 'questions' ? 'help-circle' : category.key === 'tips' ? 'lightbulb' : 'forum'} 
+                    size={16} 
+                    color={isSelected ? '#FFFFFF' : '#2E7D32'} 
+                  />
+                )}
+                accessibilityLabel={`Filter by ${category.label} posts`}
+              >
+                {category.label}
+              </Chip>
+            )
+          })}
         </View>
       </View>
 
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
-          <Text style={styles.loadingText}>Loading posts...</Text>
+          <View style={styles.loadingIconContainer}>
+            <ActivityIndicator size="large" color="#2E7D32" />
+          </View>
+          <Text variant="titleMedium" style={styles.loadingText}>Loading posts...</Text>
+          <Text variant="bodySmall" style={styles.loadingSubtext}>Please wait a moment</Text>
         </View>
       ) : (
         <FlatList
@@ -368,6 +416,7 @@ export default function CommunityScreen() {
       {user && (
         <FAB
           icon="plus"
+          color="white"
           style={styles.fab}
           onPress={() => setCreateModalVisible(true)}
           accessibilityLabel="Create new post"
@@ -407,47 +456,109 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F8F9FA",
   },
   header: {
-    padding: 16,
-    backgroundColor: "#fff",
-    elevation: 2,
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  headerIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
     color: "#2E7D32",
     fontWeight: "bold",
     marginBottom: 4,
+    fontSize: 24,
   },
   subtitle: {
     color: "#666",
-    marginBottom: 16,
+    lineHeight: 20,
   },
   filterContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
   },
   filterChip: {
     marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    backgroundColor: "#FFFFFF",
+  },
+  filterChipSelected: {
+    backgroundColor: "#2E7D32",
+    borderColor: "#2E7D32",
+  },
+  filterChipText: {
+    color: "#2E7D32",
+    fontWeight: "600",
+  },
+  filterChipTextSelected: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   listContainer: {
     padding: 16,
   },
   postCard: {
-    marginBottom: 16,
+    marginBottom: 20,
     elevation: 2,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    overflow: "hidden",
+  },
+  postCardContent: {
+    padding: 16,
   },
   postHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
   authorInfo: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+  },
+  avatarContainer: {
+    shadowColor: "#2E7D32",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarText: {
+    backgroundColor: "#E8F5E9",
   },
   authorDetails: {
     marginLeft: 12,
@@ -457,24 +568,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 4,
+  },
+  authorName: {
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  postMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   timeText: {
-    color: "#666",
-    marginTop: 2,
+    color: "#999",
+    fontSize: 12,
   },
-  categoryChip: {
-    alignSelf: "flex-start",
+  categoryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#F5F5F5",
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  postContent: {
+    marginBottom: 16,
   },
   postTitle: {
-    color: "#2E7D32",
+    color: "#1A1A1A",
     fontWeight: "bold",
-    marginBottom: 8,
-    lineHeight: 22,
+    marginBottom: 10,
+    lineHeight: 24,
+    fontSize: 17,
   },
   postSnippet: {
     color: "#666",
-    marginBottom: 12,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   imageContainer: {
     marginBottom: 12,
@@ -499,25 +634,42 @@ const styles = StyleSheet.create({
   },
   postActions: {
     borderTopWidth: 1,
-    borderTopColor: "#E0E0E0",
-    paddingTop: 12,
+    borderTopColor: "#F0F0F0",
+    paddingTop: 16,
+    marginTop: 8,
   },
   engagementStats: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 8,
+    gap: 20,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   statItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
+  },
+  statIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
   },
   statText: {
     color: "#666",
+    fontWeight: "600",
+    fontSize: 13,
   },
   actionButtons: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#E0E0E0",
   },
   loadingContainer: {
     flex: 1,
@@ -525,9 +677,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 40,
   },
+  loadingIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   loadingText: {
     marginTop: 12,
-    color: "#666",
+    color: "#2E7D32",
+    fontWeight: "600",
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    color: "#999",
   },
   emptyState: {
     flex: 1,
@@ -535,27 +701,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 40,
   },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
   emptyTitle: {
-    color: "#666",
-    marginTop: 16,
-    marginBottom: 8,
+    color: "#2E7D32",
+    marginBottom: 12,
+    fontWeight: "bold",
   },
   emptySubtitle: {
-    color: "#999",
+    color: "#666",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 28,
+    lineHeight: 22,
   },
   emptyButton: {
     backgroundColor: "#2E7D32",
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    elevation: 3,
+  },
+  emptyButtonLabel: {
+    fontSize: 15,
+    fontWeight: "600",
   },
   emptyListContainer: {
     flex: 1,
   },
   fab: {
     position: "absolute",
-    margin: 16,
+    margin: 20,
     right: 0,
     bottom: 0,
     backgroundColor: "#2E7D32",
+    borderRadius: 16,
+    elevation: 6,
+    shadowColor: "#2E7D32",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 })

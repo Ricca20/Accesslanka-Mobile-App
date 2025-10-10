@@ -227,7 +227,11 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
       }
 
       console.log('Fetching reviews for:', { businessId, placeId, placeName: place.name })
-      const reviewsData = await DatabaseService.getReviews({ businessId, placeId })
+      const options = { businessId, placeId }
+      if (user) {
+        options.currentUserId = user.id
+      }
+      const reviewsData = await DatabaseService.getReviews(options)
       console.log('Fetched reviews:', reviewsData?.length || 0, 'reviews')
       if (reviewsData && reviewsData.length > 0) {
         console.log('First review structure:', JSON.stringify(reviewsData[0], null, 2))
@@ -331,6 +335,41 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
     setCurrentImageIndex(index)
   }
 
+  // Handle marking review as helpful
+  const handleHelpful = async (reviewId, isCurrentlyHelpful) => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to mark reviews as helpful.')
+      return
+    }
+
+    try {
+      if (isCurrentlyHelpful) {
+        await DatabaseService.unmarkReviewHelpful(reviewId, user.id)
+      } else {
+        await DatabaseService.markReviewHelpful(reviewId, user.id)
+      }
+      
+      // Update local state
+      setReviews(prevReviews => 
+        prevReviews.map(review => {
+          if (review.id === reviewId) {
+            return {
+              ...review,
+              isHelpful: !isCurrentlyHelpful,
+              helpful_count: isCurrentlyHelpful 
+                ? Math.max(0, review.helpful_count - 1)
+                : (review.helpful_count || 0) + 1
+            }
+          }
+          return review
+        })
+      )
+    } catch (error) {
+      console.error('Error updating helpful status:', error)
+      Alert.alert('Error', 'Failed to update helpful status. Please try again.')
+    }
+  }
+
   // Render image item
   const renderImageItem = ({ item }) => (
     <View style={styles.imageSlide}>
@@ -432,12 +471,10 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           <View style={styles.reviewActions}>
             <Button
               mode="text"
-              icon="thumb-up-outline"
+              icon={review.isHelpful ? "thumb-up" : "thumb-up-outline"}
               compact
-              onPress={() => {
-                // TODO: Implement helpful functionality
-                Alert.alert("Coming Soon", "Mark as helpful feature coming soon!")
-              }}
+              onPress={() => handleHelpful(review.id, review.isHelpful || false)}
+              textColor={review.isHelpful ? "#2E7D32" : undefined}
             >
               Helpful ({review.helpful_count || 0})
             </Button>
