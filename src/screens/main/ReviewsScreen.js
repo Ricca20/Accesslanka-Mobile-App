@@ -6,7 +6,11 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
 import { DatabaseService } from "../../lib/database"
+<<<<<<< HEAD
 import UserBadge from "../../components/UserBadge"
+=======
+import { reviewMatchesCategory } from "../../utils/accessibilityMapping"
+>>>>>>> origin/User-and-Community-Management
 
 export default function ReviewsScreen({ navigation }) {
   const { user } = useAuth()
@@ -332,7 +336,8 @@ export default function ReviewsScreen({ navigation }) {
     
     return reviews.filter(review => {
       const accessibilityRatings = review.accessibility_ratings || {}
-      return Object.keys(accessibilityRatings).includes(selectedFilter)
+      // Use the utility function that handles both feature-based and category-based ratings
+      return reviewMatchesCategory(accessibilityRatings, selectedFilter)
     })
   }
 

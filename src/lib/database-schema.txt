@@ -104,6 +104,11 @@ CREATE TABLE reviews (
   place_id UUID REFERENCES places(id) ON DELETE CASCADE,
   user_id UUID REFERENCES users(id) NOT NULL,
   overall_rating INTEGER CHECK (overall_rating >= 1 AND overall_rating <= 5) NOT NULL,
+  -- accessibility_ratings stores both category-level ratings (for filtering) 
+  -- and optional detailed feature ratings (for granular feedback)
+  -- Structure: { mobility: 0-5, visual: 0-5, hearing: 0-5, cognitive: 0-5, features?: { feature_name: 0-5, ... } }
+  -- Category keys (mobility, visual, hearing, cognitive) are REQUIRED for filtering to work
+  -- Feature keys are optional and provide detailed breakdown per accessibility feature
   accessibility_ratings JSONB NOT NULL DEFAULT '{
     "mobility": 0,
     "visual": 0,

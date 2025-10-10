@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { AuthContext } from "../context/AuthContext"
 import { DatabaseService } from "../lib/database"
+import { featureRatingsToCategoryRatings, getFeatureIcon, formatFeatureLabel } from "../utils/accessibilityMapping"
 
 export default function AddReviewScreen({ route, navigation }) {
   const { place } = route.params
@@ -26,27 +27,10 @@ export default function AddReviewScreen({ route, navigation }) {
     
     // Map business accessibility features to display format with icons
     return businessFeatures.map(feature => {
-      // Convert snake_case to display format
-      const label = feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      
-      // Map to appropriate icons
-      const iconMap = {
-        'wheelchair_accessible': 'wheelchair-accessibility',
-        'accessible_restrooms': 'toilet',
-        'elevator_access': 'elevator',
-        'braille_signs': 'braille',
-        'hearing_loop': 'ear-hearing',
-        'accessible_parking': 'car',
-        'wide_aisles': 'resize',
-        'ramp_access': 'stairs-up',
-        'audio_guides': 'headphones',
-        'large_print': 'format-size',
-      }
-      
       return {
         key: feature, // Use the original business feature key
-        label: label,
-        icon: iconMap[feature] || 'check-circle'
+        label: formatFeatureLabel(feature),
+        icon: getFeatureIcon(feature)
       }
     })
   }
@@ -153,12 +137,22 @@ export default function AddReviewScreen({ route, navigation }) {
 
       console.log('Final determination:', { businessId, placeId })
 
+      // Convert feature-based ratings to category-based ratings for consistency
+      // This ensures filtering and aggregation work correctly
+      const categoryRatings = featureRatingsToCategoryRatings(accessibilityRatings)
+      
+      // Store both formats: category ratings for filtering, feature ratings for detail
+      const combinedRatings = {
+        ...categoryRatings, // Standard categories for filtering
+        ...(Object.keys(accessibilityRatings).length > 0 ? { features: accessibilityRatings } : {}) // Preserve feature details
+      }
+
       const reviewData = {
         business_id: businessId,
         place_id: placeId,
         user_id: user.id,
         overall_rating: overallRating,
-        accessibility_ratings: accessibilityRatings,
+        accessibility_ratings: combinedRatings,
         title: title.trim(),
         content: content.trim(),
       }

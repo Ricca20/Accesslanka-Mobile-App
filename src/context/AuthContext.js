@@ -135,8 +135,8 @@ export const AuthProvider = ({ children }) => {
     return result
   }
 
-  const signUp = async (email, password, fullName) => {
-    const result = await DatabaseService.signUp(email, password, fullName)
+  const signUp = async (email, password, fullName, accessibilityNeeds = '') => {
+    const result = await DatabaseService.signUp(email, password, fullName, accessibilityNeeds)
     return result
   }
 

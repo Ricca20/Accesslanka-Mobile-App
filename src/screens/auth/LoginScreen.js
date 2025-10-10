@@ -36,8 +36,19 @@ export default function LoginScreen({ navigation }) {
       AccessibilityService.announceSuccess("Login successful")
     } catch (error) {
       console.error("Login error:", error)
-      const errorMsg = error.message || "Failed to sign in"
-      Alert.alert("Error", errorMsg)
+      
+      let errorMsg = error.message || "Failed to sign in"
+      
+      // Check for specific error types
+      if (error.message && error.message.includes("Email not confirmed")) {
+        errorMsg = "Please verify your email address before logging in. Check your inbox for the verification link."
+      } else if (error.message && error.message.includes("Invalid login credentials")) {
+        errorMsg = "Invalid email or password. Please try again."
+      } else if (error.message && error.message.includes("Network request failed")) {
+        errorMsg = "Network error. Please check your internet connection."
+      }
+      
+      Alert.alert("Login Error", errorMsg)
       AccessibilityService.announceFormError("Login", errorMsg)
     } finally {
       setLoading(false)

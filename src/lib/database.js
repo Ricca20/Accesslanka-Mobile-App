@@ -254,21 +254,90 @@ export class DatabaseService {
   }
 
   // Authentication
-  static async signUp(email, password, fullName) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+  static async signUp(email, password, fullName, accessibilityNeeds = '') {
+    try {
+      // For Expo Go, use undefined to let Supabase use the default redirect
+      // For production builds, use the custom scheme
+      // Expo Go will handle the redirect automatically
+      const emailRedirectTo = undefined // Let Supabase handle it for Expo Go compatibility
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            accessibility_needs: accessibilityNeeds,
+          },
+          emailRedirectTo,
         },
-      },
-    })
+      })
 
-    if (error) throw error
+      if (error) {
+        console.error('Supabase signup error:', error)
+        
+        // Provide more helpful error messages
+        if (error.message.includes('User already registered')) {
+          // Check if user actually exists in database
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('email')
+            .eq('email', email)
+            .single()
+          
+          if (!existingUser) {
+            // User exists in auth but not in database - this is the edge case
+            throw new Error(
+              'Account exists but needs cleanup. Please try again in a minute or contact support.'
+            )
+          }
+          
+          throw new Error('An account with this email already exists. Please login instead.')
+        }
+        
+        throw error
+      }
 
-    // Profile will be created automatically by database trigger
-    return data
+      // Check if user was created (Supabase might return success even if email confirmation is needed)
+      if (!data.user) {
+        throw new Error('Failed to create account. Please try again.')
+      }
+
+      console.log('User created successfully:', data.user.email)
+
+      // Ensure profile exists and update with accessibility needs if provided
+      if (data.user) {
+        try {
+          // Wait a moment for the database trigger to potentially create the profile
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Use ensureUserProfile to create or get the profile
+          const profile = await this.ensureUserProfile(data.user.id, {
+            email: data.user.email,
+            full_name: fullName,
+            accessibility_needs: accessibilityNeeds,
+          })
+          
+          // If profile was just created by ensureUserProfile and needs accessibility_needs, update it
+          if (profile && accessibilityNeeds && !profile.accessibility_needs) {
+            await this.updateUserProfile(data.user.id, {
+              accessibility_needs: accessibilityNeeds
+            })
+          }
+          
+          console.log('User profile created/updated successfully with accessibility preferences')
+        } catch (profileError) {
+          console.error('Error creating/updating user profile:', profileError)
+          // Don't throw error here - user auth is still created successfully
+          // Profile will be created later by AuthContext's ensureUserProfile
+        }
+      }
+
+      return data
+    } catch (error) {
+      console.error('SignUp error:', error)
+      throw error
+    }
   }
 
   static async signIn(email, password) {

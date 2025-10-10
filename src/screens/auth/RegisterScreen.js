@@ -37,6 +37,17 @@ export default function RegisterScreen({ navigation }) {
         const errorMsg = "Please fill in all required fields"
         Alert.alert("Error", errorMsg)
         AccessibilityService.announceFormError("Form", errorMsg)
+        setLoading(false)
+        return
+      }
+
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        const errorMsg = "Please enter a valid email address"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Email", errorMsg)
+        setLoading(false)
         return
       }
 
@@ -44,20 +55,46 @@ export default function RegisterScreen({ navigation }) {
         const errorMsg = "Passwords do not match"
         Alert.alert("Error", errorMsg)
         AccessibilityService.announceFormError("Password", errorMsg)
+        setLoading(false)
         return
       }
 
-      if (formData.password.length < 6) {
-        const errorMsg = "Password must be at least 6 characters"
+      // Enhanced password validation
+      if (formData.password.length < 8) {
+        const errorMsg = "Password must be at least 8 characters"
         Alert.alert("Error", errorMsg)
         AccessibilityService.announceFormError("Password", errorMsg)
+        setLoading(false)
         return
       }
 
-      // Sign up user
-      await signUp(formData.email, formData.password, formData.name)
+      const hasUpperCase = /[A-Z]/.test(formData.password)
+      const hasLowerCase = /[a-z]/.test(formData.password)
+      const hasNumber = /[0-9]/.test(formData.password)
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+        const errorMsg = "Password must contain uppercase, lowercase, and numbers"
+        Alert.alert("Error", errorMsg)
+        AccessibilityService.announceFormError("Password", errorMsg)
+        setLoading(false)
+        return
+      }
 
-      const successMsg = "Account created successfully! Please check your email to verify your account."
+      // Prepare accessibility preferences
+      const selectedAccessibilityNeeds = Object.keys(disabilities)
+        .filter(key => disabilities[key])
+        .join(', ')
+
+      // Sign up user with accessibility preferences
+      const result = await signUp(formData.email, formData.password, formData.name, selectedAccessibilityNeeds)
+
+      // Check if email confirmation is required
+      const needsConfirmation = result?.user && !result?.session
+      
+      const successMsg = needsConfirmation 
+        ? "Account created successfully! Please check your email to verify your account before logging in."
+        : "Account created successfully! You can now login."
+      
       AccessibilityService.announceSuccess(successMsg)
       Alert.alert(
         "Success",
@@ -71,8 +108,54 @@ export default function RegisterScreen({ navigation }) {
       )
     } catch (error) {
       console.error("Registration error:", error)
-      const errorMsg = error.message || "Failed to create account"
-      Alert.alert("Error", errorMsg)
+      
+      let errorMsg = "Failed to create account"
+      let showLoginButton = false
+      
+      // Check for specific error types
+      if (error.message && error.message.includes("Network request failed")) {
+        errorMsg = "Network error. Please check your internet connection and try again."
+      } else if (error.message && error.message.includes("needs cleanup")) {
+        errorMsg = "Previous account deletion detected. Please wait 1-2 minutes and try again, or use a different email address."
+      } else if (error.message && (error.message.includes("User already registered") || error.message.includes("already been registered") || error.message.includes("already exists"))) {
+        errorMsg = "An account with this email already exists."
+        showLoginButton = true
+      } else if (error.message && error.message.includes("Invalid email")) {
+        errorMsg = "Invalid email address format."
+      } else if (error.message && error.message.includes("Password")) {
+        errorMsg = error.message
+      } else if (error.message) {
+        errorMsg = error.message
+      }
+      
+      // Show alert with option to navigate to login if user already exists
+      if (showLoginButton) {
+        Alert.alert(
+          "Account Exists", 
+          errorMsg,
+          [
+            {
+              text: "Cancel",
+              style: "cancel"
+            },
+            {
+              text: "Go to Login",
+              onPress: () => {
+                navigation.navigate("Login")
+                AccessibilityService.announceNavigation("Login")
+              }
+            }
+          ]
+        )
+      } else {
+        Alert.alert("Registration Error", errorMsg, [
+          {
+            text: "OK",
+            style: "default"
+          }
+        ])
+      }
+      
       AccessibilityService.announceFormError("Registration", errorMsg)
     } finally {
       setLoading(false)
