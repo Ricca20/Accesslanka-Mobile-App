@@ -518,7 +518,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
               <Icon 
                 name="wheelchair-accessibility" 
                 size={20} 
-                color={accessibilityStatus === 'yes' ? '#ffffffff' : accessibilityStatus === 'partial' ? '#FF9800' : '#666'} 
+                color={accessibilityStatus === 'yes' ? '#ffffff' : accessibilityStatus === 'partial' ? '#FF9800' : '#666'} 
               />
               <Text style={[
                 styles.wheelchairText,

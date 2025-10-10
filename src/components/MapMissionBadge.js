@@ -9,11 +9,28 @@ export default function MapMissionBadge({
   showProgress = false, 
   showDescription = false, 
   size = 'medium',
-  style 
+  style,
+  progressColor,
+  badgeColors
 }) {
   if (!badge) return null
 
   const getBadgeGradient = (tier) => {
+    // Use custom badge colors if provided
+    if (badgeColors) {
+      switch (tier) {
+        case 'gold':
+          return [badgeColors.gold, '#D97706', '#B45309']
+        case 'silver':
+          return [badgeColors.silver, '#9CA3AF', '#6B7280']
+        case 'bronze':
+          return [badgeColors.bronze, '#EA580C', '#C2410C']
+        default:
+          return ['#F3F4F6', '#E5E7EB', '#D1D5DB']
+      }
+    }
+    
+    // Default badge colors
     switch (tier) {
       case 'gold':
         return ['#F59E0B', '#D97706', '#B45309']
@@ -87,7 +104,7 @@ export default function MapMissionBadge({
           
           <ProgressBar 
             progress={badge.progress / 100} 
-            color={badge.color}
+            color={progressColor || badge.color}
             style={styles.progressBar}
           />
           

@@ -253,6 +253,25 @@ export class DatabaseService {
     }
   }
 
+  // Helper function to notify about contribution updates
+  static contributionUpdatedCallbacks = new Set()
+  
+  static addContributionUpdateListener(callback) {
+    this.contributionUpdatedCallbacks.add(callback)
+  }
+  
+  static removeContributionUpdateListener(callback) {
+    this.contributionUpdatedCallbacks.delete(callback)
+  }
+  
+  static notifyContributionUpdate(userId) {
+    this.contributionUpdatedCallbacks.forEach(callback => {
+      if (typeof callback === 'function') {
+        callback(userId)
+      }
+    })
+  }
+
   // Authentication
   static async signUp(email, password, fullName, accessibilityNeeds = '') {
     try {
@@ -1855,7 +1874,7 @@ export class DatabaseService {
   }
 
   // Accessibility Contribution methods
-  static async addAccessibilityPhoto(photoData) {
+  static async addAccessibilityPhoto(photoData, onContributionAdded) {
     try {
       const { data, error } = await supabase
         .from('accessibility_photos')
@@ -1864,6 +1883,15 @@ export class DatabaseService {
         .single()
 
       if (error) throw error
+      
+      // Call callback to update user stats if provided
+      if (onContributionAdded && typeof onContributionAdded === 'function') {
+        onContributionAdded(photoData.user_id)
+      }
+      
+      // Notify all listeners about the contribution update
+      this.notifyContributionUpdate(photoData.user_id)
+      
       return data
     } catch (error) {
       console.error('Error adding accessibility photo:', error)
@@ -1871,7 +1899,7 @@ export class DatabaseService {
     }
   }
 
-  static async addAccessibilityReview(reviewData) {
+  static async addAccessibilityReview(reviewData, onContributionAdded) {
     try {
       const { data, error } = await supabase
         .from('accessibility_reviews')
@@ -1880,6 +1908,15 @@ export class DatabaseService {
         .single()
 
       if (error) throw error
+      
+      // Call callback to update user stats if provided
+      if (onContributionAdded && typeof onContributionAdded === 'function') {
+        onContributionAdded(reviewData.user_id)
+      }
+      
+      // Notify all listeners about the contribution update
+      this.notifyContributionUpdate(reviewData.user_id)
+      
       return data
     } catch (error) {
       console.error('Error adding accessibility review:', error)
@@ -1887,7 +1924,7 @@ export class DatabaseService {
     }
   }
 
-  static async addAccessibilityRating(ratingData) {
+  static async addAccessibilityRating(ratingData, onContributionAdded) {
     try {
       // Use UPSERT (INSERT ON CONFLICT UPDATE) to handle duplicate constraint
       const { data, error } = await supabase
@@ -1903,6 +1940,15 @@ export class DatabaseService {
         .single()
 
       if (error) throw error
+      
+      // Call callback to update user stats if provided
+      if (onContributionAdded && typeof onContributionAdded === 'function') {
+        onContributionAdded(ratingData.user_id)
+      }
+      
+      // Notify all listeners about the contribution update
+      this.notifyContributionUpdate(ratingData.user_id)
+      
       return data
     } catch (error) {
       console.error('Error adding/updating accessibility rating:', error)
@@ -2290,7 +2336,7 @@ export class DatabaseService {
     }
   }
 
-  static async uploadAccessibilityPhoto(imageAsset, missionId, businessId, userId) {
+  static async uploadAccessibilityPhoto(imageAsset, missionId, businessId, userId, onContributionAdded) {
     try {
       console.log('Storing accessibility photo locally (like AddMyBusiness)...')
       
@@ -2319,6 +2365,14 @@ export class DatabaseService {
         photoPath: photoPath,
         photoUrl: photoUrl
       })
+
+      // Call callback to update user stats if provided
+      if (onContributionAdded && typeof onContributionAdded === 'function') {
+        onContributionAdded(userId)
+      }
+      
+      // Notify all listeners about the contribution update
+      this.notifyContributionUpdate(userId)
 
       return {
         photoPath: photoPath,

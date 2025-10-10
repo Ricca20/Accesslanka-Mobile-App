@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ScrollView, Alert, Image } from 'react-native'
-import { Text, TextInput, Button, Card, Divider, Avatar, IconButton } from 'react-native-paper'
+import { View, StyleSheet, ScrollView, Alert, Image, Dimensions } from 'react-native'
+import { Text, TextInput, Button, Card, Divider, Avatar, IconButton, Surface } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import * as ImagePicker from 'expo-image-picker'
 import { useAuth } from '../context/AuthContext'
 import { DatabaseService } from '../lib/database'
+
+const { width } = Dimensions.get('window')
 
 export default function EditProfileScreen({ navigation }) {
   const { user, updateProfile } = useAuth()
@@ -126,139 +130,174 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="headlineSmall" style={styles.title}>
-              Edit Profile
-            </Text>
-            <Text variant="bodyMedium" style={styles.subtitle}>
-              Update your personal information
-            </Text>
-
-            <Divider style={styles.divider} />
-
-            {/* Profile Photo */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Profile Photo Section */}
+        <Surface style={styles.photoSection} elevation={3}>
+          <View style={styles.photoContainer}>
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Profile Photo
             </Text>
             
-            <View style={styles.photoContainer}>
-              <View style={styles.avatarContainer}>
-                {formData.avatar_url ? (
+            <View style={styles.avatarContainer}>
+              {formData.avatar_url ? (
+                <View style={styles.avatarWrapper}>
                   <Image source={{ uri: formData.avatar_url }} style={styles.avatarImage} />
-                ) : (
-                  <Avatar.Text 
-                    size={100} 
-                    label={(formData.full_name || user?.email || "U").substring(0, 2).toUpperCase()}
-                    style={styles.avatarPlaceholder}
-                  />
-                )}
-                {formData.avatar_url && (
                   <IconButton
                     icon="close-circle"
-                    size={24}
-                    mode="contained"
+                    size={28}
+                    iconColor="#FF5722"
                     style={styles.removePhotoButton}
                     onPress={removePhoto}
                   />
-                )}
-              </View>
-              <View style={styles.photoButtons}>
-                <Button
-                  mode="outlined"
-                  icon="camera-plus"
-                  onPress={showPhotoOptions}
-                  style={styles.photoButton}
-                >
-                  {formData.avatar_url ? 'Change Photo' : 'Add Photo'}
-                </Button>
-              </View>
+                </View>
+              ) : (
+                <View style={styles.avatarWrapper}>
+                  <Avatar.Text 
+                    size={120} 
+                    label={(formData.full_name || user?.email || "U").substring(0, 2).toUpperCase()}
+                    style={styles.avatarPlaceholder}
+                  />
+                </View>
+              )}
             </View>
+            
+            <Button
+              mode="contained"
+              icon="camera-plus"
+              onPress={showPhotoOptions}
+              style={styles.photoButton}
+              contentStyle={styles.photoButtonContent}
+            >
+              {formData.avatar_url ? 'Change Photo' : 'Add Photo'}
+            </Button>
+          </View>
+        </Surface>
 
-            <Divider style={styles.divider} />
+        {/* Personal Information Section */}
+        <Surface style={styles.formSection} elevation={3}>
+          <View style={styles.sectionHeader}>
+            <Icon name="account-edit" size={24} color="#4CAF50" />
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Personal Information
+            </Text>
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Text variant="labelLarge" style={styles.label}>
-                Full Name *
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={formData.full_name}
-                onChangeText={(text) => setFormData({ ...formData, full_name: text })}
-                placeholder="Enter your full name"
-                style={styles.input}
-              />
-            </View>
+          <View style={styles.inputContainer}>
+            <Text variant="labelLarge" style={styles.label}>
+              Full Name *
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={formData.full_name}
+              onChangeText={(text) => setFormData({ ...formData, full_name: text })}
+              placeholder="Enter your full name"
+              style={styles.input}
+              left={<TextInput.Icon icon="account" />}
+              outlineColor="#E0E0E0"
+              activeOutlineColor="#4CAF50"
+            />
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Text variant="labelLarge" style={styles.label}>
-                Email
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={user?.email || ''}
-                editable={false}
-                placeholder="Email cannot be changed"
-                style={[styles.input, styles.disabledInput]}
-              />
+          <View style={styles.inputContainer}>
+            <Text variant="labelLarge" style={styles.label}>
+              Email
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={user?.email || ''}
+              editable={false}
+              placeholder="Email cannot be changed"
+              style={[styles.input, styles.disabledInput]}
+              left={<TextInput.Icon icon="email" />}
+              outlineColor="#E0E0E0"
+            />
+            <View style={styles.helperContainer}>
+              <Icon name="information" size={16} color="#666" />
               <Text variant="bodySmall" style={styles.helperText}>
                 Email cannot be changed. Contact support if needed.
               </Text>
             </View>
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Text variant="labelLarge" style={styles.label}>
-                Location
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={formData.location}
-                onChangeText={(text) => setFormData({ ...formData, location: text })}
-                placeholder="e.g., Colombo, Sri Lanka"
-                style={styles.input}
-              />
-            </View>
+          <View style={styles.inputContainer}>
+            <Text variant="labelLarge" style={styles.label}>
+              Location
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={formData.location}
+              onChangeText={(text) => setFormData({ ...formData, location: text })}
+              placeholder="e.g., Colombo, Sri Lanka"
+              style={styles.input}
+              left={<TextInput.Icon icon="map-marker" />}
+              outlineColor="#E0E0E0"
+              activeOutlineColor="#4CAF50"
+            />
+          </View>
+        </Surface>
 
-            <View style={styles.inputContainer}>
-              <Text variant="labelLarge" style={styles.label}>
-                Accessibility Needs
-              </Text>
-              <TextInput
-                mode="outlined"
-                value={formData.accessibility_needs}
-                onChangeText={(text) => setFormData({ ...formData, accessibility_needs: text })}
-                placeholder="Describe any accessibility requirements"
-                multiline
-                numberOfLines={3}
-                style={styles.input}
-              />
+        {/* Accessibility Section */}
+        <Surface style={styles.formSection} elevation={3}>
+          <View style={styles.sectionHeader}>
+            <Icon name="wheelchair-accessibility" size={24} color="#4CAF50" />
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Accessibility Preferences
+            </Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text variant="labelLarge" style={styles.label}>
+              Accessibility Needs
+            </Text>
+            <TextInput
+              mode="outlined"
+              value={formData.accessibility_needs}
+              onChangeText={(text) => setFormData({ ...formData, accessibility_needs: text })}
+              placeholder="Describe any accessibility requirements"
+              multiline
+              numberOfLines={4}
+              style={[styles.input, styles.textAreaInput]}
+              left={<TextInput.Icon icon="heart-pulse" />}
+              outlineColor="#E0E0E0"
+              activeOutlineColor="#4CAF50"
+            />
+            <View style={styles.helperContainer}>
+              <Icon name="lightbulb-on" size={16} color="#4CAF50" />
               <Text variant="bodySmall" style={styles.helperText}>
                 This helps us provide better recommendations for accessible places.
               </Text>
             </View>
+          </View>
+        </Surface>
 
-            <View style={styles.buttonContainer}>
-              <Button
-                mode="outlined"
-                onPress={() => navigation.goBack()}
-                style={styles.cancelButton}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                mode="contained"
-                onPress={handleSave}
-                loading={loading}
-                style={styles.saveButton}
-                disabled={loading}
-              >
-                Save Changes
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
+        {/* Action Buttons */}
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="outlined"
+            onPress={() => navigation.goBack()}
+            style={styles.cancelButton}
+            contentStyle={styles.buttonContent}
+            disabled={loading}
+            icon="cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            loading={loading}
+            style={styles.saveButton}
+            contentStyle={styles.buttonContent}
+            disabled={loading}
+            icon="content-save"
+          >
+            Save Changes
+          </Button>
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -267,86 +306,167 @@ export default function EditProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8F9FA',
   },
-  card: {
-    margin: 16,
-    elevation: 2,
+  header: {
+    paddingBottom: 20,
   },
-  title: {
-    color: '#2E7D32',
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 10,
+  },
+  backButton: {
+    margin: 0,
+  },
+  headerTitle: {
+    color: 'white',
     fontWeight: 'bold',
-    marginBottom: 8,
+    flex: 1,
+    textAlign: 'center',
   },
-  subtitle: {
-    color: '#666',
-    marginBottom: 16,
+  headerSpacer: {
+    width: 48, // Same width as back button for centering
   },
-  divider: {
-    marginBottom: 24,
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  photoSection: {
+    margin: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+  },
+  formSection: {
+    margin: 16,
+    marginVertical: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+  },
+  photoContainer: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   sectionTitle: {
     color: '#2E7D32',
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  photoContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+    fontWeight: '600',
+    flex: 1,
   },
   avatarContainer: {
+    marginBottom: 20,
+  },
+  avatarWrapper: {
     position: 'relative',
-    marginBottom: 16,
+    alignItems: 'center',
   },
   avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: '#f0f0f0',
+    borderWidth: 4,
+    borderColor: 'white',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   avatarPlaceholder: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#4CAF50',
+    borderWidth: 4,
+    borderColor: 'white',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   removePhotoButton: {
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#fff',
-  },
-  photoButtons: {
-    flexDirection: 'row',
-    gap: 12,
+    backgroundColor: 'white',
+    elevation: 2,
   },
   photoButton: {
-    minWidth: 120,
+    backgroundColor: '#4CAF50',
+    borderRadius: 25,
+    minWidth: 150,
+  },
+  photoButtonContent: {
+    paddingVertical: 8,
   },
   inputContainer: {
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   label: {
     color: '#2E7D32',
+    fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
+    fontSize: 16,
+  },
+  textAreaInput: {
+    minHeight: 100,
   },
   disabledInput: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
+  },
+  helperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
   },
   helperText: {
     color: '#666',
-    marginTop: 4,
+    flex: 1,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 24,
+    gap: 16,
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
   cancelButton: {
     flex: 1,
+    borderColor: '#4CAF50',
+    borderWidth: 2,
+    borderRadius: 25,
   },
   saveButton: {
     flex: 1,
+    backgroundColor: '#4CAF50',
+    borderRadius: 25,
+    elevation: 2,
+  },
+  buttonContent: {
+    paddingVertical: 8,
   },
 })

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, FlatList, Alert, RefreshControl, TouchableOpacity } from 'react-native'
-import { Text, Card, Button, ActivityIndicator, Chip, Badge, Divider } from 'react-native-paper'
+import { Text, Card, Button, ActivityIndicator, Chip, Badge, Divider, FAB } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { useAuth } from '../context/AuthContext'
@@ -11,7 +11,7 @@ const STATUS_COLORS = {
   pending: '#FF9800',
   approved: '#4CAF50',
   rejected: '#F44336',
-  verified: '#9C27B0',
+  verified: '#2E7D32',
 }
 
 const STATUS_LABELS = {
@@ -370,7 +370,7 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
 
           <View style={styles.businessDetails}>
             <View style={styles.detailRow}>
-              <Icon name="map-marker-outline" size={16} color="#666" />
+              <Icon name="map-marker-outline" size={16} color="#2E7D32" />
               <Text variant="bodySmall" style={styles.detailText}>
                 {item.address}
               </Text>
@@ -378,7 +378,7 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
             
             {item.phone && (
               <View style={styles.detailRow}>
-                <Icon name="phone-outline" size={16} color="#666" />
+                <Icon name="phone-outline" size={16} color="#2E7D32" />
                 <Text variant="bodySmall" style={styles.detailText}>
                   {item.phone}
                 </Text>
@@ -411,7 +411,7 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
                   <Icon 
                     name={isExpanded ? "chevron-up" : "chevron-down"} 
                     size={16} 
-                    color="#6366F1" 
+                    color="#2E7D32" 
                   />
                 </TouchableOpacity>
               )}
@@ -473,15 +473,6 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text variant="headlineSmall" style={styles.title}>
-          My Business Submissions
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          {submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}
-        </Text>
-      </View>
-
       <FlatList
         data={submissions}
         renderItem={renderSubmission}
@@ -504,12 +495,22 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
               mode="contained"
               onPress={() => navigation.navigate('AddMyBusiness')}
               style={styles.addButton}
+              labelStyle={styles.addButtonText}
               icon="store-plus"
             >
               Add My Business
             </Button>
           </View>
         }
+      />
+      
+      {/* Floating Action Button for Adding New Business */}
+      <FAB
+        icon="plus"
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddMyBusiness')}
+        label="Add Business"
+        color="#fff"
       />
     </SafeAreaView>
   )
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   expandButtonText: {
-    color: '#6366F1',
+    color: '#2E7D32',
     fontWeight: '500',
   },
   expandedContainer: {
@@ -800,5 +801,16 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 8,
+    backgroundColor: '#2E7D32',
+  },
+  addButtonText: {
+    color: '#fff',
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#2E7D32',
   },
 })

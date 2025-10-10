@@ -1,12 +1,17 @@
-import { View, StyleSheet, ScrollView, Alert, Image } from "react-native"
-import { Text, Card, Button, Avatar, List, Divider } from "react-native-paper"
+import { View, StyleSheet, ScrollView, Alert, Image, Dimensions } from "react-native"
+import { Text, Card, Button, Avatar, List, Divider, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
+import { LinearGradient } from "expo-linear-gradient"
 import { useAuth } from "../context/AuthContext"
 import { useEffect, useState } from "react"
+import React from "react"
+import { useFocusEffect } from "@react-navigation/native"
 import { DatabaseService } from "../lib/database"
 import AccessibilityService from "../services/AccessibilityService"
 import MapMissionBadge from "../components/MapMissionBadge"
+
+const { width } = Dimensions.get('window')
 
 export default function ProfileScreen({ navigation }) {
   const { user, signOut, loading } = useAuth()
@@ -20,7 +25,7 @@ export default function ProfileScreen({ navigation }) {
       activeMissions: 0,
       createdMissions: 0,
       totalContributions: 0,
-      badge: { tier: 'none', title: 'New Explorer', color: '#9CA3AF', progress: 0 }
+      badge: { tier: 'none', title: 'New Explorer', color: '#2E7D32', progress: 0 }
     }
   })
 
@@ -33,8 +38,31 @@ export default function ProfileScreen({ navigation }) {
     if (user?.id) {
       loadUserProfile()
       loadUserStats()
+      
+      // Listen for contribution updates
+      const handleContributionUpdate = (contributorUserId) => {
+        if (contributorUserId === user.id) {
+          loadUserStats() // Refresh stats immediately when this user makes a contribution
+        }
+      }
+      
+      DatabaseService.addContributionUpdateListener(handleContributionUpdate)
+      
+      // Cleanup listener on unmount
+      return () => {
+        DatabaseService.removeContributionUpdateListener(handleContributionUpdate)
+      }
     }
   }, [user])
+
+  // Refresh stats when screen comes into focus (after user makes MapMission contributions)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.id) {
+        loadUserStats()
+      }
+    }, [user?.id])
+  )
 
   const loadUserProfile = async () => {
     try {
@@ -116,40 +144,6 @@ export default function ProfileScreen({ navigation }) {
     favoritesCount: userStats.favoritesCount,
   }
 
-  const handleSyncBusinessVerification = async () => {
-    try {
-      Alert.alert(
-        'Sync Business Status',
-        'This will update business statuses based on their MapMission status (upcoming→pending, active/completed→verified). Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Sync Now',
-            onPress: async () => {
-              try {
-                const result = await DatabaseService.syncBusinessStatusWithMapMissions()
-                Alert.alert(
-                  'Sync Complete',
-                  result.message,
-                  [{ text: 'OK' }]
-                )
-              } catch (error) {
-                console.error('Sync error:', error)
-                Alert.alert(
-                  'Sync Failed',
-                  'Failed to sync business status with MapMissions. Please try again.',
-                  [{ text: 'OK' }]
-                )
-              }
-            }
-          }
-        ]
-      )
-    } catch (error) {
-      console.error('Error in sync function:', error)
-    }
-  }
-
   const menuItems = [
     {
       title: "My Reviews",
@@ -164,27 +158,15 @@ export default function ProfileScreen({ navigation }) {
       onPress: () => navigation.navigate("MyFavorites"),
     },
     {
-      title: "Add My Business",
-      description: "Submit your business for listing",
-      icon: "store-plus-outline",
-      onPress: () => navigation.navigate("AddMyBusiness"),
-    },
-    {
-      title: "My Business Submissions",
-      description: "View your submitted businesses",
-      icon: "clipboard-list-outline",
+      title: "My Business",
+      description: "Add or manage your business submissions",
+      icon: "store-outline",
       onPress: () => navigation.navigate("MyBusinessSubmissions"),
-    },
-    {
-      title: "Sync Business Status",
-      description: "Update business status based on MapMission status",
-      icon: "shield-sync-outline",
-      onPress: handleSyncBusinessVerification,
     },
     {
       title: "Accessibility Preferences",
       description: "Customize your experience",
-      icon: "cog-outline",
+      icon: "wheelchair-accessibility",
       onPress: () => navigation.navigate("AccessibilityPreferences"),
     },
     {
@@ -196,14 +178,8 @@ export default function ProfileScreen({ navigation }) {
     {
       title: "Settings",
       description: "Account and app settings",
-      icon: "settings-outline",
+      icon: "cog-outline",
       onPress: () => navigation.navigate("Settings"),
-    },
-    {
-      title: "Database Test",
-      description: "Insert sample review data",
-      icon: "database-outline",
-      onPress: () => navigation.navigate("DatabaseTest"),
     },
   ]
 
@@ -227,241 +203,490 @@ export default function ProfileScreen({ navigation }) {
     </View>
   )
 
+  const getMenuIconColor = (iconName) => {
+    const colorMap = {
+      'star-outline': '#FF9800',
+      'heart-outline': '#E91E63',
+      'store-outline': '#2196F3',
+      'cog-outline': '#9C27B0',
+      'bell-outline': '#FF5722',
+      'settings-outline': '#607D8B'
+    }
+    return colorMap[iconName] || '#6B7280'
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <Card style={styles.profileCard}>
-          <Card.Content style={styles.profileContent}>
-            <View style={styles.profileHeader}>
+    <View style={styles.container}>
+      {/* Header with Gradient Background */}
+      
+
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Profile Card with Floating Effect */}
+        <Surface style={styles.profileSurface} elevation={4}>
+          <View style={styles.profileContent}>
+            <View style={styles.avatarContainer}>
               {userData.avatar_url ? (
                 <Image source={{ uri: userData.avatar_url }} style={styles.avatarImage} />
               ) : (
-                <Avatar.Text size={80} label={userData.avatar} />
+                <Avatar.Text size={100} label={userData.avatar} style={styles.avatar} />
               )}
-              <View style={styles.profileInfo}>
-                <Text variant="headlineSmall" style={styles.userName}>
-                  {userData.name}
-                </Text>
-                <Text variant="bodyMedium" style={styles.userEmail}>
-                  {userData.email}
-                </Text>
-                <Text variant="bodySmall" style={styles.joinDate}>
+              <View style={styles.onlineIndicator} />
+            </View>
+            
+            <View style={styles.userInfo}>
+              <Text variant="headlineSmall" style={styles.userName}>
+                {userData.name}
+              </Text>
+              <Text variant="bodyLarge" style={styles.userEmail}>
+                {userData.email}
+              </Text>
+              <View style={styles.membershipContainer}>
+                <Icon name="calendar-clock" size={16} color="#6B7280" />
+                <Text variant="bodySmall" style={styles.membershipText}>
                   Member since {userData.joinDate}
                 </Text>
               </View>
             </View>
 
-            <Button mode="outlined" style={styles.editButton} onPress={() => navigation.navigate("EditProfile")} accessibilityLabel="Edit profile">
+            <Button 
+              mode="contained" 
+              style={styles.editButton} 
+              onPress={() => navigation.navigate("EditProfile")}
+              contentStyle={styles.editButtonContent}
+            >
               Edit Profile
             </Button>
-          </Card.Content>
-        </Card>
+          </View>
+        </Surface>
 
-        {/* MapMission Badges Section */}
-        <Card style={styles.badgesCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              MapMission Explorer Badge
+        {/* Quick Stats Grid */}
+        <View style={styles.statsGrid}>
+          <Surface style={styles.statCard} elevation={2}>
+            <Icon name="star" size={24} color="#FF9800" />
+            <Text variant="titleLarge" style={styles.statNumber}>
+              {userStats.reviewsCount}
             </Text>
-            
-            {/* Badge Display */}
-            <View style={styles.badgeSection}>
-              <MapMissionBadge 
-                badge={userStats.missionStats.badge}
-                showProgress={true}
-                showDescription={true}
-                size="large"
-              />
-            </View>
+            <Text variant="bodySmall" style={styles.statLabel}>
+              Reviews
+            </Text>
+          </Surface>
+          
+          <Surface style={styles.statCard} elevation={2}>
+            <Icon name="heart" size={24} color="#E91E63" />
+            <Text variant="titleLarge" style={styles.statNumber}>
+              {userStats.favoritesCount}
+            </Text>
+            <Text variant="bodySmall" style={styles.statLabel}>
+              Favorites
+            </Text>
+          </Surface>
+          
+          <Surface style={styles.statCard} elevation={2}>
+            <Icon name="thumb-up" size={24} color="#4CAF50" />
+            <Text variant="titleLarge" style={styles.statNumber}>
+              {userStats.helpfulVotes}
+            </Text>
+            <Text variant="bodySmall" style={styles.statLabel}>
+              Helpful
+            </Text>
+          </Surface>
+        </View>
 
-            {/* Mission Stats Grid */}
-            <View style={styles.missionStatsContainer}>
-              <Text variant="titleSmall" style={styles.subsectionTitle}>
-                Activity Summary
-              </Text>
-              <View style={styles.missionStatsGrid}>
-                <View style={styles.missionStatItem}>
-                  <Icon name="target" size={20} color="#10B981" />
-                  <Text variant="labelSmall" style={styles.missionStatLabel}>
-                    Completed
-                  </Text>
-                  <Text variant="titleMedium" style={styles.missionStatValue}>
-                    {userStats.missionStats.completedMissions}
-                  </Text>
+        {/* MapMission Badge Section */}
+        <Surface style={styles.badgeSection} elevation={3}>
+          <View style={styles.badgeHeader}>
+            <Icon name="medal" size={24} color="#4CAF50" />
+            <Text variant="titleMedium" style={styles.badgeTitle}>
+              Explorer Achievement
+            </Text>
+          </View>
+          
+          <View style={styles.badgeContent}>
+            <MapMissionBadge 
+              badge={userStats.missionStats.badge}
+              showProgress={true}
+              size="large"
+              progressColor="#4CAF50"
+              badgeColors={{
+                gold: '#FFD700',
+                silver: '#C0C0C0',
+                bronze: '#CD7F32'
+              }}
+            />
+          </View>
+
+          {/* Mission Activity Summary */}
+          <View style={styles.activitySummary}>
+            <Text variant="titleSmall" style={styles.activityTitle}>
+              Mission Activity
+            </Text>
+            <View style={styles.activityGrid}>
+              <View style={styles.activityItem}>
+                <View style={[styles.activityIcon, { backgroundColor: '#E8F5E8' }]}>
+                  <Icon name="check-circle" size={20} color="#4CAF50" />
                 </View>
-                <View style={styles.missionStatItem}>
-                  <Icon name="play-circle" size={20} color="#F59E0B" />
-                  <Text variant="labelSmall" style={styles.missionStatLabel}>
-                    Active
-                  </Text>
-                  <Text variant="titleMedium" style={styles.missionStatValue}>
-                    {userStats.missionStats.activeMissions}
-                  </Text>
+                <Text variant="labelMedium" style={styles.activityLabel}>Completed</Text>
+                <Text variant="titleMedium" style={styles.activityValue}>
+                  {userStats.missionStats.completedMissions}
+                </Text>
+              </View>
+              
+              <View style={styles.activityItem}>
+                <View style={[styles.activityIcon, { backgroundColor: '#FFF3E0' }]}>
+                  <Icon name="play-circle" size={20} color="#FF9800" />
                 </View>
-                <View style={styles.missionStatItem}>
-                  <Icon name="plus-circle" size={20} color="#6366F1" />
-                  <Text variant="labelSmall" style={styles.missionStatLabel}>
-                    Created
-                  </Text>
-                  <Text variant="titleMedium" style={styles.missionStatValue}>
-                    {userStats.missionStats.createdMissions}
-                  </Text>
+                <Text variant="labelMedium" style={styles.activityLabel}>Active</Text>
+                <Text variant="titleMedium" style={styles.activityValue}>
+                  {userStats.missionStats.activeMissions}
+                </Text>
+              </View>
+              
+              <View style={styles.activityItem}>
+                <View style={[styles.activityIcon, { backgroundColor: '#E3F2FD' }]}>
+                  <Icon name="plus-circle" size={20} color="#2196F3" />
                 </View>
-                <View style={styles.missionStatItem}>
-                  <Icon name="camera" size={20} color="#EC4899" />
-                  <Text variant="labelSmall" style={styles.missionStatLabel}>
-                    Contributions
-                  </Text>
-                  <Text variant="titleMedium" style={styles.missionStatValue}>
-                    {userStats.missionStats.totalContributions}
-                  </Text>
-                </View>
+                <Text variant="labelMedium" style={styles.activityLabel}>Created</Text>
+                <Text variant="titleMedium" style={styles.activityValue}>
+                  {userStats.missionStats.createdMissions}
+                </Text>
               </View>
             </View>
-          </Card.Content>
-        </Card>
+          </View>
+        </Surface>
 
-        {/* Stats Section */}
-        <Card style={styles.statsCard}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Your Impact
-            </Text>
-            <View style={styles.statsContainer}>
-              {renderStat("Reviews\nWritten", userStats.reviewsCount)}
-              {renderStat("Helpful\nVotes", userStats.helpfulVotes)}
-              {renderStat("Favorite\nPlaces", userStats.favoritesCount)}
-              {renderStat("Member\nSince", userData.joinDate.split(' ')[1] || 'Recently')}
-            </View>
-          </Card.Content>
-        </Card>
-
-        {/* Menu Items */}
-        <Card style={styles.menuCard} accessible={false}>
-          <Card.Content style={styles.menuContent}>
+        {/* Menu Options */}
+        <Surface style={styles.menuSection} elevation={2}>
+          <Text variant="titleMedium" style={styles.menuTitle}>
+            Quick Actions
+          </Text>
+          
+          <View style={styles.menuGrid}>
             {menuItems.map((item, index) => (
-              <View key={index}>
-                <List.Item
-                  title={item.title}
-                  description={item.description}
-                  left={(props) => <List.Icon {...props} icon={item.icon} {...AccessibilityService.ignoreProps()} />}
-                  right={(props) => <List.Icon {...props} icon="chevron-right" {...AccessibilityService.ignoreProps()} />}
+              <Surface
+                key={index}
+                style={styles.menuItem}
+                elevation={1}
+              >
+                <Button
+                  mode="text"
                   onPress={() => {
                     item.onPress()
                     AccessibilityService.announce(`Opening ${item.title}`)
                   }}
-                  style={styles.menuItem}
-                  accessible={true}
-                  accessibilityLabel={AccessibilityService.listItemLabel(`${item.title}. ${item.description}`, index, menuItems.length)}
-                  accessibilityHint={AccessibilityService.buttonHint(`open ${item.title}`)}
-                  accessibilityRole="button"
-                />
-                {index < menuItems.length - 1 && <Divider {...AccessibilityService.ignoreProps()} />}
-              </View>
+                  style={styles.menuButton}
+                  contentStyle={styles.menuButtonContent}
+                >
+                  <View style={styles.menuItemContent}>
+                    <View style={[styles.menuIconContainer, { backgroundColor: getMenuIconColor(item.icon) }]}>
+                      <Icon name={item.icon} size={24} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.menuTextContainer}>
+                      <Text variant="titleSmall" style={styles.menuItemTitle}>
+                        {item.title}
+                      </Text>
+                      <Text variant="bodySmall" style={styles.menuItemDescription}>
+                        {item.description}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-right" size={20} color="#9CA3AF" />
+                  </View>
+                </Button>
+              </Surface>
             ))}
-          </Card.Content>
-        </Card>
+          </View>
+        </Surface>
 
-        {/* Sign Out Button */}
-        <View style={styles.signOutContainer}>
+        {/* Sign Out Section */}
+        <View style={styles.signOutSection}>
           <Button
             mode="outlined"
             icon="logout"
             onPress={handleSignOut}
             style={styles.signOutButton}
-            accessibilityLabel="Sign out"
-            accessibilityHint={AccessibilityService.buttonHint("sign out of your account")}
-            accessibilityRole="button"
+            contentStyle={styles.signOutButtonContent}
+            buttonColor="#D32F2F"
+            textColor="#FFEBEE"
           >
             Sign Out
           </Button>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F8FAFC",
   },
+  
+  // Header Styles
+  headerGradient: {
+    paddingBottom: 40,
+  },
+  headerSafeArea: {
+    paddingTop: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  settingsButton: {
+    borderRadius: 20,
+  },
+  
+  // Scroll View
+  scrollView: {
+    flex: 1,
+    marginTop: -30,
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  
+  // Profile Section
+  profileSurface: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 20,
+    marginTop:  60,
+  },
+  profileContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+  },
+  avatar: {
+    backgroundColor: '#2E7D32',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#4CAF50',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  userInfo: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  userName: {
+    color: "#1F2937",
+    fontWeight: "bold",
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  userEmail: {
+    color: "#6B7280",
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  membershipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  membershipText: {
+    color: "#6B7280",
+  },
+  editButton: {
+    borderRadius: 25,
+    backgroundColor: '#2E7D32',
+    minWidth: 140,
+  },
+  editButtonContent: {
+    paddingVertical: 4,
+  },
+  
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 20,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    cols: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  statNumber: {
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  statLabel: {
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  
+  // Badge Section
+  badgeSection: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    marginBottom: 20,
+  },
+  badgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  badgeTitle: {
+    color: '#1f3725ff',
+    fontWeight: 'bold',
+  },
+  badgeContent: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  
+  // Activity Summary
+  activitySummary: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 16,
+  },
+  activityTitle: {
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  activityGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  activityItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activityLabel: {
+    color: '#6B7280',
+    fontSize: 11,
+  },
+  activityValue: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+  },
+  
+  // Menu Section
+  menuSection: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    marginBottom: 20,
+  },
+  menuTitle: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  menuGrid: {
+    gap: 8,
+  },
+  menuItem: {
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    overflow: 'hidden',
+  },
+  menuButton: {
+    margin: 0,
+    borderRadius: 12,
+  },
+  menuButtonContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  menuIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  menuItemTitle: {
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  menuItemDescription: {
+    color: '#6B7280',
+    lineHeight: 16,
+  },
+  
+  // Sign Out
+  signOutSection: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  signOutButton: {
+    borderRadius: 12,
+    borderColor: '#EF4444',
+    borderWidth: 1,
+  },
+  signOutButtonContent: {
+    paddingVertical: 8,
+  },
+  
+  // Legacy styles for compatibility
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  profileCard: {
-    margin: 16,
-    elevation: 2,
-  },
-  profileContent: {
-    padding: 20,
-  },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f0f0f0',
-  },
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  userName: {
-    color: "#2E7D32",
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  userEmail: {
-    color: "#666",
-    marginBottom: 4,
-  },
-  joinDate: {
-    color: "#666",
-  },
-  editButton: {
-    alignSelf: "flex-start",
-  },
-  badgesCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
-  },
-  sectionTitle: {
-    color: "#2E7D32",
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  badgesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  badgeItem: {
-    alignItems: "center",
-    minWidth: 80,
-  },
-  badgeText: {
-    marginTop: 8,
-    textAlign: "center",
-    color: "#666",
-  },
-  statsCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
   },
   statItem: {
     alignItems: "center",
@@ -469,64 +694,5 @@ const styles = StyleSheet.create({
   statValue: {
     color: "#2E7D32",
     fontWeight: "bold",
-  },
-  statLabel: {
-    color: "#666",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  menuCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
-  },
-  menuContent: {
-    padding: 0,
-  },
-  menuItem: {
-    paddingVertical: 8,
-  },
-  signOutContainer: {
-    padding: 16,
-    alignItems: "center",
-  },
-  signOutButton: {
-    borderColor: "#D32F2F",
-  },
-  badgeSection: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  missionStatsContainer: {
-    marginTop: 16,
-  },
-  subsectionTitle: {
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  missionStatsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  missionStatItem: {
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 12,
-    minWidth: 70,
-    flex: 1,
-  },
-  missionStatLabel: {
-    color: '#6B7280',
-    marginVertical: 4,
-    textAlign: 'center',
-  },
-  missionStatValue: {
-    color: '#1F2937',
-    fontWeight: '600',
   },
 })
