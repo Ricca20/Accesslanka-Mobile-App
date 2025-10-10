@@ -702,6 +702,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   fab: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#2E7D32' + '70',
   },
 })

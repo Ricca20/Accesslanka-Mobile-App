@@ -104,11 +104,20 @@ export default function EditProfileScreen({ navigation }) {
         return
       }
 
+      // Check if avatar is being uploaded
+      const isUploadingAvatar = formData.avatar_url && formData.avatar_url.startsWith('file://')
+      
+      if (isUploadingAvatar) {
+        console.log('[EditProfileScreen] Uploading new avatar to cloud storage...')
+      }
+
       await updateProfile(formData)
       
       Alert.alert(
         'Success',
-        'Profile updated successfully!',
+        isUploadingAvatar 
+          ? 'Profile and photo updated successfully!'
+          : 'Profile updated successfully!',
         [
           {
             text: 'OK',
@@ -118,7 +127,12 @@ export default function EditProfileScreen({ navigation }) {
       )
     } catch (error) {
       console.error('Error updating profile:', error)
-      Alert.alert('Error', 'Failed to update profile. Please try again.')
+      Alert.alert(
+        'Error', 
+        error.message?.includes('upload') 
+          ? 'Failed to upload photo. Please check your internet connection and try again.'
+          : 'Failed to update profile. Please try again.'
+      )
     } finally {
       setLoading(false)
     }

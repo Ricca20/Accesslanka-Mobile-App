@@ -226,10 +226,10 @@ export default function AccessibilityContributionScreen({ route, navigation }) {
 
     setLoading(true)
     try {
-      console.log('Starting photo upload...')
-      console.log('Selected image details:', selectedImage)
+      console.log('[AccessibilityContributionScreen] Starting photo upload to cloud storage...')
+      console.log('[AccessibilityContributionScreen] Selected image details:', selectedImage)
 
-      // Upload photo and get URL
+      // Upload photo to Supabase Storage and get public URL
       const { photoPath, photoUrl } = await DatabaseService.uploadAccessibilityPhoto(
         selectedImage,
         mission.id,
@@ -237,22 +237,22 @@ export default function AccessibilityContributionScreen({ route, navigation }) {
         user.id
       )
 
-      console.log('Photo uploaded successfully:', { photoPath, photoUrl })
+      console.log('[AccessibilityContributionScreen] Photo uploaded successfully to cloud storage:', { photoPath, photoUrl })
 
       // Save photo record to database - use general accessibility feature
       const photoData = {
         mission_id: mission.id,
         business_id: business.id,
         user_id: user.id,
-        photo_url: photoUrl,
-        photo_path: photoPath,
+        photo_url: photoUrl, // Now contains Supabase Storage public URL
+        photo_path: photoPath, // Storage path for deletion
         feature_type: 'general_accessibility', // Generic feature type for photos
         feature_description: photoDescription.trim(),
         location_description: locationDescription.trim() || null,
         is_helpful: isHelpful
       }
 
-      console.log('Saving photo data to database:', photoData)
+      console.log('[AccessibilityContributionScreen] Saving photo data to database:', photoData)
       await DatabaseService.addAccessibilityPhoto(photoData)
 
       // Reset form
@@ -264,10 +264,15 @@ export default function AccessibilityContributionScreen({ route, navigation }) {
       // Refresh contributions
       await loadUserContributions()
 
-      Alert.alert('Success', 'Photo added successfully!')
+      Alert.alert('Success', 'Photo uploaded and added successfully!')
     } catch (error) {
-      console.error('Error adding photo:', error)
-      Alert.alert('Error', 'Failed to add photo. Please try again.\n\nError: ' + error.message)
+      console.error('[AccessibilityContributionScreen] Error adding photo:', error)
+      Alert.alert(
+        'Error', 
+        error.message?.includes('upload') || error.message?.includes('Storage')
+          ? 'Failed to upload photo. Please check your internet connection and try again.'
+          : 'Failed to add photo. Please try again.\n\nError: ' + error.message
+      )
     } finally {
       setLoading(false)
     }

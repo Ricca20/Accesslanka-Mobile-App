@@ -190,6 +190,13 @@ export default function AddMyBusinessScreen({ navigation }) {
     try {
       setLoading(true)
 
+      // Check if photos need to be uploaded
+      const hasPhotosToUpload = formData.photos.some(uri => uri.startsWith('file://'))
+      
+      if (hasPhotosToUpload) {
+        console.log('[AddMyBusinessScreen] Uploading photos to cloud storage...')
+      }
+
       // Prepare business data
       const businessData = {
         name: formData.name.trim(),
@@ -203,14 +210,16 @@ export default function AddMyBusinessScreen({ navigation }) {
         email: formData.email.trim() || null,
         opening_hours: formData.opening_hours,
         accessibility_features: formData.accessibility_features,
-        photos: formData.photos // This will be mapped to 'images' in the database
+        photos: formData.photos // Photos will be uploaded to Supabase Storage automatically
       }
 
       await DatabaseService.createBusinessSubmission(user.id, businessData)
 
       Alert.alert(
         'Success!',
-        'Your business has been submitted for review. We\'ll notify you once it\'s approved and listed.',
+        hasPhotosToUpload
+          ? 'Your business and photos have been submitted for review. We\'ll notify you once it\'s approved and listed.'
+          : 'Your business has been submitted for review. We\'ll notify you once it\'s approved and listed.',
         [
           {
             text: 'OK',
@@ -221,7 +230,12 @@ export default function AddMyBusinessScreen({ navigation }) {
 
     } catch (error) {
       console.error('Error submitting business:', error)
-      Alert.alert('Error', 'Failed to submit business. Please try again.')
+      Alert.alert(
+        'Error', 
+        error.message?.includes('upload') 
+          ? 'Failed to upload photos. Please check your internet connection and try again.'
+          : 'Failed to submit business. Please try again.'
+      )
     } finally {
       setLoading(false)
     }
