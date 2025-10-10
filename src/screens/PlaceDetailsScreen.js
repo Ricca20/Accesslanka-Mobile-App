@@ -6,6 +6,7 @@ import { useFocusEffect } from "@react-navigation/native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../lib/database"
 import { useAuth } from "../context/AuthContext"
+import { getFeatureIcon, formatFeatureLabel } from "../utils/accessibilityMapping"
 
 const { width } = Dimensions.get("window")
 const IMAGE_WIDTH = width
@@ -387,33 +388,29 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           {review.accessibility_ratings && Object.keys(review.accessibility_ratings).length > 0 && (
             <View style={styles.reviewAccessibilityRatings}>
               {Object.entries(review.accessibility_ratings).map(([featureKey, rating]) => {
+                // Skip the 'features' sub-object and only show top-level ratings
+                if (featureKey === 'features' || rating === 0 || typeof rating !== 'number') {
+                  return null
+                }
+                
+                // Show category ratings (mobility, visual, hearing, cognitive)
                 if (rating > 0) {
-                  // Convert feature key to display format
-                  const featureLabel = featureKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                  
-                  // Map to appropriate icons
-                  const iconMap = {
-                    'wheelchair_accessible': 'wheelchair-accessibility',
-                    'accessible_restrooms': 'toilet',
-                    'elevator_access': 'elevator',
-                    'braille_signs': 'braille',
-                    'hearing_loop': 'ear-hearing',
-                    'accessible_parking': 'car',
-                    'wide_aisles': 'resize',
-                    'ramp_access': 'stairs-up',
-                    'audio_guides': 'headphones',
-                    'large_print': 'format-size',
-                    // Legacy support for old categories
-                    'mobility': 'wheelchair-accessibility',
-                    'visual': 'eye',
-                    'hearing': 'ear-hearing',
-                    'cognitive': 'brain',
-                  }
-                  
                   return (
                     <Chip key={featureKey} style={styles.accessibilityChip} compact>
-                      <Icon name={iconMap[featureKey] || 'check-circle'} size={14} color="#2E7D32" />
-                      {` ${featureLabel}: ${rating}/5`}
+                      <Icon name={getFeatureIcon(featureKey)} size={14} color="#2E7D32" />
+                      {` ${formatFeatureLabel(featureKey)}: ${rating}/5`}
+                    </Chip>
+                  )
+                }
+                return null
+              })}
+              {/* Show detailed feature ratings if available */}
+              {review.accessibility_ratings.features && Object.entries(review.accessibility_ratings.features).map(([featureKey, rating]) => {
+                if (rating > 0) {
+                  return (
+                    <Chip key={`feature-${featureKey}`} style={styles.accessibilityChip} compact mode="outlined">
+                      <Icon name={getFeatureIcon(featureKey)} size={14} color="#2E7D32" />
+                      {` ${formatFeatureLabel(featureKey)}: ${rating}/5`}
                     </Chip>
                   )
                 }
