@@ -6,11 +6,8 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
 import { DatabaseService } from "../../lib/database"
-<<<<<<< HEAD
 import UserBadge from "../../components/UserBadge"
-=======
 import { reviewMatchesCategory } from "../../utils/accessibilityMapping"
->>>>>>> origin/User-and-Community-Management
 
 export default function ReviewsScreen({ navigation }) {
   const { user } = useAuth()
