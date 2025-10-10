@@ -85,12 +85,21 @@ export default function MyFavoritesScreen({ navigation }) {
 
   const renderFavorite = ({ item }) => {
     // Handle both business and place data
-    const place = item.business || item.place || item
-    const name = place.name || 'Unknown Place'
-    const category = place.category || 'general'
-    const address = place.address || 'No address available'
-    const verified = place.verified || false
-    const rating = place.rating || 4.0 // Default rating
+    const placeData = item.business || item.place || item
+    const name = placeData.name || 'Unknown Place'
+    const category = placeData.category || 'general'
+    const address = placeData.address || 'No address available'
+    const verified = placeData.verified || false
+    const rating = placeData.rating || 4.0 // Default rating
+    
+    // Ensure the place object has all necessary fields for PlaceDetailsScreen
+    const place = {
+      ...placeData,
+      // Add type field to help PlaceDetailsScreen identify business vs place
+      type: item.business_id ? 'business' : 'place',
+      business_id: item.business_id,
+      place_id: item.place_id,
+    }
 
     return (
       <Card 
@@ -100,29 +109,38 @@ export default function MyFavoritesScreen({ navigation }) {
         <Card.Content>
           <View style={styles.favoriteHeader}>
             <View style={styles.categoryIcon}>
-              <Icon name={getCategoryIcon(category)} size={24} color="#2E7D32" />
+              <Icon name={getCategoryIcon(category)} size={28} color="#2E7D32" />
             </View>
             <View style={styles.favoriteInfo}>
               <View style={styles.titleRow}>
-                <Text variant="titleMedium" style={styles.favoriteName}>
+                <Text variant="titleMedium" style={styles.favoriteName} numberOfLines={2}>
                   {name}
                 </Text>
-                {verified && (
-                  <Icon name="check-decagram" size={16} color="#2E7D32" />
-                )}
+
               </View>
-              <Text variant="bodySmall" style={styles.favoriteCategory}>
+              <Chip 
+                mode="outlined" 
+                compact 
+                style={styles.categoryChip}
+              >
                 {category.charAt(0).toUpperCase() + category.slice(1)}
-              </Text>
-              <Text variant="bodySmall" style={styles.favoriteAddress}>
-                {address}
-              </Text>
+              </Chip>
+              <View style={styles.addressRow}>
+                <Icon name="map-marker" size={14} color="#999" />
+                <Text variant="bodySmall" style={styles.favoriteAddress} numberOfLines={2}>
+                  {address}
+                </Text>
+              </View>
             </View>
             <IconButton
               icon="heart"
               iconColor="#e91e63"
               size={24}
-              onPress={() => removeFavorite(item)}
+              onPress={(e) => {
+                e.stopPropagation()
+                removeFavorite(item)
+              }}
+              style={styles.heartButton}
             />
           </View>
 
@@ -132,12 +150,29 @@ export default function MyFavoritesScreen({ navigation }) {
                 {renderStars(rating)}
               </View>
               <Text variant="bodySmall" style={styles.ratingText}>
-                {rating}/5
+                {rating.toFixed(1)}/5
               </Text>
             </View>
-            <Text variant="bodySmall" style={styles.favoriteDate}>
-              Added {new Date(item.created_at).toLocaleDateString()}
-            </Text>
+            <View style={styles.dateContainer}>
+              <Icon name="clock-outline" size={12} color="#999" />
+              <Text variant="bodySmall" style={styles.favoriteDate}>
+                Added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </Text>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+
+            <Button
+              mode="text"
+              compact
+              icon="information"
+              onPress={() => navigation.navigate('PlaceDetails', { place })}
+              style={styles.actionButton}
+            >
+              View Details
+            </Button>
           </View>
         </Card.Content>
       </Card>
@@ -158,12 +193,22 @@ export default function MyFavoritesScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text variant="headlineSmall" style={styles.title}>
-          My Favorites
-        </Text>
-        <Text variant="bodyMedium" style={styles.subtitle}>
-          {favorites.length} {favorites.length === 1 ? 'place' : 'places'} saved
-        </Text>
+        <View style={styles.headerTop}>
+          <Icon name="heart" size={28} color="#e91e63" />
+          <View style={styles.headerTextContainer}>
+            <Text variant="headlineSmall" style={styles.title}>
+              My Favorites
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              {favorites.length} {favorites.length === 1 ? 'place' : 'places'} saved
+            </Text>
+          </View>
+        </View>
+        {favorites.length > 0 && (
+          <Text variant="bodySmall" style={styles.headerHint}>
+            Tap any place to view details and reviews
+          </Text>
+        )}
       </View>
 
       <FlatList
@@ -176,15 +221,21 @@ export default function MyFavoritesScreen({ navigation }) {
         onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.centerContainer}>
-            <Icon name="heart-outline" size={64} color="#ccc" />
-            <Text variant="titleMedium" style={styles.emptyTitle}>
-              No favorites yet
+            <View style={styles.emptyIconContainer}>
+              <Icon name="heart-outline" size={80} color="#e91e63" />
+            </View>
+            <Text variant="headlineSmall" style={styles.emptyTitle}>
+              No Favorites Yet
             </Text>
             <Text variant="bodyMedium" style={styles.emptyText}>
               Start exploring and save your favorite accessible places!
             </Text>
+            <Text variant="bodySmall" style={styles.emptyHint}>
+              Tap the heart icon on any place to add it to your favorites
+            </Text>
             <Button
               mode="contained"
+              icon="magnify"
               onPress={() => navigation.navigate('Explore')}
               style={styles.exploreButton}
             >
@@ -212,6 +263,15 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
     elevation: 2,
+    gap: 12,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   title: {
     color: '#2E7D32',
@@ -219,7 +279,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: '#666',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  headerHint: {
+    color: '#999',
+    fontStyle: 'italic',
   },
   listContainer: {
     padding: 16,
@@ -227,48 +291,67 @@ const styles = StyleSheet.create({
   },
   favoriteCard: {
     marginBottom: 16,
-    elevation: 2,
+    elevation: 3,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
   favoriteHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   categoryIcon: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     backgroundColor: '#e8f5e8',
-    borderRadius: 20,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   favoriteInfo: {
     flex: 1,
+    gap: 6,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 6,
   },
   favoriteName: {
     color: '#2E7D32',
+    fontSize: 20,
     fontWeight: 'bold',
     flex: 1,
+    lineHeight: 26,
   },
-  favoriteCategory: {
-    color: '#666',
-    marginTop: 2,
-    textTransform: 'capitalize',
+  categoryChip: {
+    alignSelf: 'flex-start',
+    height: 34,
+    backgroundColor: '#F0F8F0',
+    borderColor: '#2E7D32',
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
   },
   favoriteAddress: {
-    color: '#999',
-    marginTop: 2,
+    color: '#666',
+    flex: 1,
+    lineHeight: 18,
+  },
+  heartButton: {
+    margin: 0,
   },
   favoriteFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    marginBottom: 8,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -277,24 +360,60 @@ const styles = StyleSheet.create({
   },
   starsContainer: {
     flexDirection: 'row',
+    gap: 2,
   },
   ratingText: {
     color: '#666',
+    fontWeight: '600',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   favoriteDate: {
     color: '#999',
+    fontSize: 11,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+    paddingTop: 8,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  emptyIconContainer: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#FFF0F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#333',
+    marginBottom: 12,
+    fontWeight: 'bold',
   },
   emptyText: {
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  emptyHint: {
     color: '#999',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
+    fontStyle: 'italic',
+    paddingHorizontal: 20,
   },
   exploreButton: {
     marginTop: 8,
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 24,
   },
 })
