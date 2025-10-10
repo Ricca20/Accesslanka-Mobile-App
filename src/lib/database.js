@@ -102,6 +102,9 @@ export class DatabaseService {
 
       if (favoritesError) throw favoritesError
 
+      // Get MapMission statistics
+      const missionStats = await this.getUserMapMissionStats(userId)
+
       // Calculate helpful votes (sum of all helpful_count from user's reviews)
       const helpfulVotes = reviews?.reduce((sum, review) => sum + (review.helpful_count || 0), 0) || 0
 
@@ -109,6 +112,7 @@ export class DatabaseService {
         reviewsCount: reviews?.length || 0,
         favoritesCount: favorites?.length || 0,
         helpfulVotes: helpfulVotes,
+        ...missionStats
       }
     } catch (error) {
       console.error('Error getting user stats:', error)
@@ -116,6 +120,135 @@ export class DatabaseService {
         reviewsCount: 0,
         favoritesCount: 0,
         helpfulVotes: 0,
+        missionStats: {
+          completedMissions: 0,
+          activeMissions: 0,
+          createdMissions: 0,
+          totalContributions: 0,
+          badge: { tier: 'none', title: 'New Explorer', color: '#9CA3AF', progress: 0 }
+        }
+      }
+    }
+  }
+
+  static async getUserMapMissionStats(userId) {
+    try {
+      // Get user's participation in missions
+      const { data: participations, error: participationError } = await supabase
+        .from('mapmission_participants')
+        .select(`
+          id,
+          mission_id,
+          completed_at,
+          progress,
+          mapmissions!inner(id, status, created_by)
+        `)
+        .eq('user_id', userId)
+
+      if (participationError) throw participationError
+
+      // Get missions created by user
+      const { data: createdMissions, error: createdError } = await supabase
+        .from('mapmissions')
+        .select('id, status')
+        .eq('created_by', userId)
+
+      if (createdError) throw createdError
+
+      // Get user's accessibility contributions (photos, reviews, ratings)
+      const { data: contributions, error: contributionsError } = await supabase
+        .from('accessibility_photos')
+        .select('id')
+        .eq('user_id', userId)
+
+      const { data: reviewContributions, error: reviewError } = await supabase
+        .from('accessibility_reviews')
+        .select('id')
+        .eq('user_id', userId)
+
+      const { data: ratingContributions, error: ratingError } = await supabase
+        .from('accessibility_ratings')
+        .select('id')
+        .eq('user_id', userId)
+
+      // Calculate statistics
+      const completedMissions = participations?.filter(p => p.completed_at).length || 0
+      const activeMissions = participations?.filter(p => !p.completed_at && p.mapmissions?.status === 'active').length || 0
+      const createdMissionsCount = createdMissions?.length || 0
+      const totalContributions = (contributions?.length || 0) + 
+                                (reviewContributions?.length || 0) + 
+                                (ratingContributions?.length || 0)
+
+      // Calculate badge based on total contributions
+      const badge = this.calculateMapMissionBadge(totalContributions)
+
+      return {
+        missionStats: {
+          completedMissions,
+          activeMissions,
+          createdMissions: createdMissionsCount,
+          totalContributions,
+          badge
+        }
+      }
+    } catch (error) {
+      console.error('Error getting user MapMission stats:', error)
+      return {
+        missionStats: {
+          completedMissions: 0,
+          activeMissions: 0,
+          createdMissions: 0,
+          totalContributions: 0,
+          badge: { tier: 'none', title: 'New Explorer', color: '#9CA3AF', progress: 0 }
+        }
+      }
+    }
+  }
+
+  static calculateMapMissionBadge(totalContributions) {
+    if (totalContributions >= 50) {
+      return {
+        tier: 'gold',
+        title: 'Gold Explorer',
+        color: '#F59E0B',
+        icon: 'medal',
+        progress: 100,
+        description: 'Legendary MapMission Explorer!',
+        nextTier: null,
+        contributionsToNext: 0
+      }
+    } else if (totalContributions >= 25) {
+      return {
+        tier: 'silver',
+        title: 'Silver Explorer',
+        color: '#6B7280',
+        icon: 'medal-outline',
+        progress: Math.min(100, ((totalContributions - 25) / 25) * 100),
+        description: 'Experienced MapMission Explorer',
+        nextTier: 'gold',
+        contributionsToNext: 50 - totalContributions
+      }
+    } else if (totalContributions >= 10) {
+      return {
+        tier: 'bronze',
+        title: 'Bronze Explorer',
+        color: '#D97706',
+        icon: 'star-circle',
+        progress: Math.min(100, ((totalContributions - 10) / 15) * 100),
+        description: 'Rising MapMission Explorer',
+        nextTier: 'silver',
+        contributionsToNext: 25 - totalContributions
+      }
+    } else {
+      return {
+        tier: 'none',
+        title: 'New Explorer',
+        color: '#9CA3AF',
+        icon: 'map-marker-outline',
+        progress: totalContributions >= 1 ? ((totalContributions / 10) * 100) : 0,
+        description: 'Ready to start your MapMission journey!',
+        nextTier: 'bronze',
+        contributionsToNext: 10 - totalContributions
       }
     }
   }
@@ -172,12 +305,27 @@ export class DatabaseService {
   }
 
   static async getCurrentUser() {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error) throw error
-    
-    return {
-      user: session?.user || null,
-      session: session
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        // Handle specific refresh token errors
+        if (error.message?.includes('Invalid Refresh Token') || 
+            error.message?.includes('Refresh Token Not Found')) {
+          console.log('Invalid refresh token detected, clearing session...')
+          await this.signOut()
+          return { user: null, session: null }
+        }
+        throw error
+      }
+      
+      return {
+        user: session?.user || null,
+        session: session
+      }
+    } catch (error) {
+      console.error('Error getting current user:', error)
+      throw error
     }
   }
 

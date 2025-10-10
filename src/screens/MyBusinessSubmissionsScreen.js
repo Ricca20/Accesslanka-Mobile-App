@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { useAuth } from '../context/AuthContext'
 import { DatabaseService } from '../lib/database'
+import UserBadge from '../components/UserBadge'
 
 const STATUS_COLORS = {
   pending: '#FF9800',
@@ -182,9 +183,12 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
             {reviews.slice(0, 3).map((review, index) => (
               <View key={review.id} style={styles.reviewItem}>
                 <View style={styles.reviewHeader}>
-                  <Text variant="bodySmall" style={styles.reviewUser}>
-                    {review.user_name || 'Anonymous User'}
-                  </Text>
+                  <View style={styles.reviewUserInfo}>
+                    <Text variant="bodySmall" style={styles.reviewUser}>
+                      {review.user_name || 'Anonymous User'}
+                    </Text>
+                    <UserBadge userId={review.user_id} size="tiny" />
+                  </View>
                   <Chip 
                     mode="flat" 
                     compact 
@@ -240,9 +244,12 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
             {ratings.slice(0, 3).map((rating, index) => (
               <View key={rating.id} style={styles.ratingItem}>
                 <View style={styles.ratingHeader}>
-                  <Text variant="bodySmall" style={styles.reviewUser}>
-                    {rating.user_name || 'Anonymous User'}
-                  </Text>
+                  <View style={styles.reviewUserInfo}>
+                    <Text variant="bodySmall" style={styles.reviewUser}>
+                      {rating.user_name || 'Anonymous User'}
+                    </Text>
+                    <UserBadge userId={rating.user_id} size="tiny" />
+                  </View>
                   <Chip 
                     mode="flat" 
                     compact 
@@ -668,6 +675,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   reviewUser: {
     color: '#1F2937',

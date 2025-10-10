@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext"
 import { useEffect, useState } from "react"
 import { DatabaseService } from "../lib/database"
 import AccessibilityService from "../services/AccessibilityService"
+import MapMissionBadge from "../components/MapMissionBadge"
 
 export default function ProfileScreen({ navigation }) {
   const { user, signOut, loading } = useAuth()
@@ -14,6 +15,13 @@ export default function ProfileScreen({ navigation }) {
     reviewsCount: 0,
     favoritesCount: 0,
     helpfulVotes: 0,
+    missionStats: {
+      completedMissions: 0,
+      activeMissions: 0,
+      createdMissions: 0,
+      totalContributions: 0,
+      badge: { tier: 'none', title: 'New Explorer', color: '#9CA3AF', progress: 0 }
+    }
   })
 
   useEffect(() => {
@@ -250,19 +258,69 @@ export default function ProfileScreen({ navigation }) {
           </Card.Content>
         </Card>
 
-        {/* Badges Section - Future Feature */}
-        {/* 
+        {/* MapMission Badges Section */}
         <Card style={styles.badgesCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>
-              Badges Earned
+              MapMission Explorer Badge
             </Text>
-            <Text variant="bodyMedium" style={{ textAlign: 'center', color: '#666' }}>
-              Badges coming soon! Keep writing reviews and helping the community.
-            </Text>
+            
+            {/* Badge Display */}
+            <View style={styles.badgeSection}>
+              <MapMissionBadge 
+                badge={userStats.missionStats.badge}
+                showProgress={true}
+                showDescription={true}
+                size="large"
+              />
+            </View>
+
+            {/* Mission Stats Grid */}
+            <View style={styles.missionStatsContainer}>
+              <Text variant="titleSmall" style={styles.subsectionTitle}>
+                Activity Summary
+              </Text>
+              <View style={styles.missionStatsGrid}>
+                <View style={styles.missionStatItem}>
+                  <Icon name="target" size={20} color="#10B981" />
+                  <Text variant="labelSmall" style={styles.missionStatLabel}>
+                    Completed
+                  </Text>
+                  <Text variant="titleMedium" style={styles.missionStatValue}>
+                    {userStats.missionStats.completedMissions}
+                  </Text>
+                </View>
+                <View style={styles.missionStatItem}>
+                  <Icon name="play-circle" size={20} color="#F59E0B" />
+                  <Text variant="labelSmall" style={styles.missionStatLabel}>
+                    Active
+                  </Text>
+                  <Text variant="titleMedium" style={styles.missionStatValue}>
+                    {userStats.missionStats.activeMissions}
+                  </Text>
+                </View>
+                <View style={styles.missionStatItem}>
+                  <Icon name="plus-circle" size={20} color="#6366F1" />
+                  <Text variant="labelSmall" style={styles.missionStatLabel}>
+                    Created
+                  </Text>
+                  <Text variant="titleMedium" style={styles.missionStatValue}>
+                    {userStats.missionStats.createdMissions}
+                  </Text>
+                </View>
+                <View style={styles.missionStatItem}>
+                  <Icon name="camera" size={20} color="#EC4899" />
+                  <Text variant="labelSmall" style={styles.missionStatLabel}>
+                    Contributions
+                  </Text>
+                  <Text variant="titleMedium" style={styles.missionStatValue}>
+                    {userStats.missionStats.totalContributions}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </Card.Content>
         </Card>
-        */}
 
         {/* Stats Section */}
         <Card style={styles.statsCard}>
@@ -434,5 +492,41 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     borderColor: "#D32F2F",
+  },
+  badgeSection: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  missionStatsContainer: {
+    marginTop: 16,
+  },
+  subsectionTitle: {
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  missionStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  missionStatItem: {
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    minWidth: 70,
+    flex: 1,
+  },
+  missionStatLabel: {
+    color: '#6B7280',
+    marginVertical: 4,
+    textAlign: 'center',
+  },
+  missionStatValue: {
+    color: '#1F2937',
+    fontWeight: '600',
   },
 })

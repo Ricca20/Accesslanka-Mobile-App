@@ -8,6 +8,7 @@ import { CommunityService } from "../../services/CommunityService"
 import { useAuth } from "../../context/AuthContext"
 import CreatePostModal from "../../components/CreatePostModal"
 import PostDetailsModal from "../../components/PostDetailsModal"
+import UserBadge from "../../components/UserBadge"
 
 export default function CommunityScreen() {
   const { user } = useAuth()
@@ -191,7 +192,10 @@ export default function CommunityScreen() {
                 <Avatar.Text size={36} label={item.authorInitials} />
               )}
               <View style={styles.authorDetails}>
-                <Text variant="titleSmall">{item.author}</Text>
+                <View style={styles.authorNameRow}>
+                  <Text variant="titleSmall">{item.author}</Text>
+                  <UserBadge userId={item.authorId} size="tiny" />
+                </View>
                 <Text variant="bodySmall" style={styles.timeText}>
                   {CommunityService.getTimeAgo(item.created_at)}
                 </Text>
@@ -448,6 +452,11 @@ const styles = StyleSheet.create({
   authorDetails: {
     marginLeft: 12,
     flex: 1,
+  },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   timeText: {
     color: "#666",

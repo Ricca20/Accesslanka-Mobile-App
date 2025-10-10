@@ -6,6 +6,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
 import { useTheme } from "../../context/ThemeContext"
 import { DatabaseService } from "../../lib/database"
+import UserBadge from "../../components/UserBadge"
 
 export default function ReviewsScreen({ navigation }) {
   const { user } = useAuth()
@@ -409,6 +410,8 @@ export default function ReviewsScreen({ navigation }) {
                   {item.user?.email_verified && 
                     <Icon name="check-decagram" size={16} color={theme.colors.primary} />
                   }
+                  {/* User Badge */}
+                  <UserBadge userId={item.user_id} size="tiny" />
                 </View>
                 <Text variant="bodySmall" style={[styles.placeText, { color: theme.colors.onSurfaceVariant }]}>
                   {placeName}

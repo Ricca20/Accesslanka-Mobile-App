@@ -76,6 +76,17 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
+        
+        // Handle invalid refresh token errors
+        if (error.message?.includes('Invalid Refresh Token') || 
+            error.message?.includes('Refresh Token Not Found')) {
+          console.log('Clearing invalid session...')
+          try {
+            await DatabaseService.signOut()
+          } catch (signOutError) {
+            console.error('Error signing out invalid session:', signOutError)
+          }
+        }
       } finally {
         if (mounted) {
           setLoading(false)
@@ -130,9 +141,28 @@ export const AuthProvider = ({ children }) => {
   }
 
   const signOut = async () => {
-    await DatabaseService.signOut()
-    setUser(null)
-    setSession(null)
+    try {
+      await DatabaseService.signOut()
+      setUser(null)
+      setSession(null)
+    } catch (error) {
+      console.error('Error signing out:', error)
+      // Force clear state even if signOut fails
+      setUser(null)
+      setSession(null)
+    }
+  }
+
+  const clearAuthState = async () => {
+    try {
+      // Force clear any persisted auth state
+      await DatabaseService.signOut()
+    } catch (error) {
+      console.error('Error clearing auth state:', error)
+    } finally {
+      setUser(null)
+      setSession(null)
+    }
   }
 
   const resetPassword = async (email) => {

@@ -5,6 +5,9 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { DatabaseService } from "../lib/database"
+import MapMissionBadge from "../components/MapMissionBadge"
+import UserBadge from "../components/UserBadge"
+
 import { useAuth } from "../context/AuthContext"
 
 const { width } = Dimensions.get("window")
@@ -351,11 +354,17 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           {/* Review Header */}
           <View style={styles.reviewHeader}>
             <View style={styles.reviewUserInfo}>
-              <Text variant="titleSmall" style={styles.reviewUserName}>
-                {review.users?.full_name || 'Anonymous User'}
-              </Text>
-              {review.users?.verified && (
-                <Icon name="check-decagram" size={16} color="#2E7D32" />
+              <View style={styles.reviewUserDetails}>
+                <Text variant="titleSmall" style={styles.reviewUserName}>
+                  {review.users?.full_name || 'Anonymous User'}
+                </Text>
+                {review.users?.verified && (
+                  <Icon name="check-decagram" size={16} color="#2E7D32" />
+                )}
+              </View>
+              {/* Small badge for the reviewer */}
+              {review.user_id && (
+                <UserBadge userId={review.user_id} size="small" />
               )}
             </View>
             <Text variant="bodySmall" style={styles.reviewDate}>
@@ -761,9 +770,6 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                               <View style={styles.reviewMeta}>
                                 <Text style={styles.reviewFeature}>
                                   {review.feature_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </Text>
-                                <Text style={styles.reviewDifficulty}>
-                                  {review.difficulty_level}
                                 </Text>
                                 <Text style={styles.reviewMission}>
                                   {review.mission_title}
@@ -1258,6 +1264,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  reviewUserDetails: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
