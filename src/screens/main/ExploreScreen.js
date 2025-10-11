@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { View, StyleSheet, Dimensions, Alert, TouchableOpacity, Platform } from "react-native"
-import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator, FAB, Chip } from "react-native-paper"
+import { Searchbar, Card, Text, Button, List, Divider, ActivityIndicator, FAB, Chip, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps"
 import * as Location from 'expo-location'
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
+import { LinearGradient } from "expo-linear-gradient"
 import { DatabaseService } from "../../lib/database"
 import { DatabasePlacesService } from "../../services/DatabasePlacesService"
 import AccessibilityService from "../../services/AccessibilityService"
@@ -394,6 +395,62 @@ export default function ExploreScreen({ navigation }) {
     setSelectedPlace(null)
   }
 
+  // Handle locate current location
+  const handleLocateMe = async () => {
+    try {
+      if (!userLocation) {
+        AccessibilityService.announce("Getting your location...")
+        const { status } = await Location.requestForegroundPermissionsAsync()
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Location permission is needed to show your position.')
+          return
+        }
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        })
+        
+        const userCoords = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        }
+        
+        setUserLocation(userCoords)
+        
+        // Center map on user location with zoom in
+        const newRegion = {
+          ...userCoords,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }
+        setRegion(newRegion)
+        
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000)
+        }
+        
+        AccessibilityService.announce("Map centered and zoomed to your location")
+      } else {
+        // If we already have location, just center the map with zoom in
+        const newRegion = {
+          ...userLocation,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }
+        
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000)
+        }
+        
+        AccessibilityService.announce("Map centered and zoomed to your location")
+      }
+    } catch (error) {
+      console.error('Error getting location:', error)
+      Alert.alert('Error', 'Unable to get your location. Please try again.')
+      AccessibilityService.announce("Unable to get your location")
+    }
+  }
+
   // Get category icon
   const getCategoryIcon = (category) => {
     const categoryItem = categories.find(c => c.key === category)
@@ -412,6 +469,25 @@ export default function ExploreScreen({ navigation }) {
       government: '#607D8B',
     }
     return colors[category] || '#2E7D32'
+  }
+  
+  // Get suggestion type color and icon
+  const getSuggestionColor = (type) => {
+    const colors = {
+      action: '#2E7D32',
+      category: '#1976D2',
+      place: '#2E7D32',
+      feature: '#4CAF50',
+      history: '#9E9E9E',
+    }
+    return colors[type] || '#6B7280'
+  }
+  
+  const getSuggestionIcon = (suggestion) => {
+    if (suggestion.type === 'category') {
+      return getCategoryIcon(suggestion.data)
+    }
+    return suggestion.icon
   }
   
   // Render a place card
@@ -545,6 +621,7 @@ export default function ExploreScreen({ navigation }) {
                       handleSuggestionPress(suggestion)
                       AccessibilityService.announce(`Selected ${suggestion.text}`)
                     }}
+                    style={styles.suggestionTouch}
                     accessible={true}
                     accessibilityLabel={AccessibilityService.listItemLabel(
                       `${suggestion.text}. ${suggestion.subtitle}`,
@@ -554,15 +631,42 @@ export default function ExploreScreen({ navigation }) {
                     accessibilityHint={AccessibilityService.buttonHint(`select ${suggestion.text}`)}
                     accessibilityRole="menuitem"
                   >
-                    <List.Item
-                      title={suggestion.text}
-                      description={suggestion.subtitle}
-                      left={(props) => <List.Icon {...props} icon={suggestion.icon} {...AccessibilityService.ignoreProps()} />}
-                      style={styles.suggestionItem}
-                      accessible={false}
-                    />
+                    <View style={styles.suggestionItem}>
+                      {/* Colorful Icon Badge */}
+                      <Surface 
+                        style={[
+                          styles.suggestionIconBadge, 
+                          { backgroundColor: getSuggestionColor(suggestion.type) }
+                        ]} 
+                        elevation={2}
+                      >
+                        <Icon 
+                          name={getSuggestionIcon(suggestion)} 
+                          size={20} 
+                          color="#FFFFFF" 
+                        />
+                      </Surface>
+                      
+                      {/* Text Content */}
+                      <View style={styles.suggestionTextContent}>
+                        <View style={styles.suggestionTitleRow}>
+                          <Text variant="bodyMedium" style={styles.suggestionTitle}>
+                            {suggestion.text}
+                          </Text>
+                          
+                        </View>
+                        <Text variant="bodySmall" style={styles.suggestionSubtitle}>
+                          {suggestion.subtitle}
+                        </Text>
+                      </View>
+                      
+                      {/* Arrow Icon */}
+                      <Icon name="chevron-right" size={16} color="#D1D5DB" />
+                    </View>
                   </TouchableOpacity>
-                  {index < searchSuggestions.length - 1 && <Divider {...AccessibilityService.ignoreProps()} />}
+                  {index < searchSuggestions.length - 1 && (
+                    <Divider style={styles.suggestionDivider} />
+                  )}
                 </View>
               ))}
             </Card.Content>
@@ -570,11 +674,8 @@ export default function ExploreScreen({ navigation }) {
         )}
       </View>
 
-      {/* Map View */}
-      <View 
-        style={styles.mapContainer}
-        accessible={false}
-      >
+      {/* Enhanced Map View */}
+      <Surface style={styles.mapContainer} elevation={3}>
         <MapView
           ref={mapRef}
           style={styles.map}
@@ -603,20 +704,44 @@ export default function ExploreScreen({ navigation }) {
               accessibilityHint={AccessibilityService.markerHint()}
               accessibilityRole="button"
             >
-              <View style={[
+              <Surface style={[
                 styles.markerContainer,
                 selectedPlace?.id === place.id && styles.selectedMarker
-              ]}>
-                <Icon 
-                  name={place.accessibility_features?.wheelchair_accessible ? "wheelchair-accessibility" : "map-marker"}
-                  size={30}
-                  color={selectedPlace?.id === place.id ? "#2E7D32" : "#1976D2"}
-                />
-              </View>
+              ]} elevation={selectedPlace?.id === place.id ? 8 : 4}>
+                <LinearGradient
+                  colors={selectedPlace?.id === place.id ? ['#2E7D32', '#4CAF50'] : [getCategoryColor(place.category), getCategoryColor(place.category) + 'CC']}
+                  style={styles.markerGradient}
+                >
+                  <Icon 
+                    name={place.accessibility_features?.wheelchair_accessible ? "wheelchair-accessibility" : getCategoryIcon(place.category)}
+                    size={selectedPlace?.id === place.id ? 24 : 20}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              </Surface>
             </Marker>
           ))}
         </MapView>
-      </View>
+
+        {/* Current Location Button */}
+        <Surface style={styles.locationButton} elevation={6}>
+          <TouchableOpacity
+            onPress={handleLocateMe}
+            style={styles.locationButtonTouch}
+            accessible={true}
+            accessibilityLabel="Center map on current location"
+            accessibilityHint="Double tap to move map to your current position"
+            accessibilityRole="button"
+          >
+            <LinearGradient
+              colors={['#2E7D32', '#4CAF50']}
+              style={styles.locationButtonGradient}
+            >
+              <Icon name="crosshairs-gps" size={24} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Surface>
+      </Surface>
       
       {/* Floating AI Assistant Button */}
       <View
@@ -643,6 +768,7 @@ export default function ExploreScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -658,18 +784,19 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   searchContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#fff",
     elevation: 4,
     zIndex: 1,
   },
   searchbar: {
     elevation: 2,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   suggestionsCard: {
     position: 'absolute',
-    top: 60,
+    top: 52,
     left: 16,
     right: 16,
     zIndex: 10,
@@ -678,19 +805,133 @@ const styles = StyleSheet.create({
   suggestionsContent: {
     padding: 0,
   },
+  suggestionTouch: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
   suggestionItem: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  suggestionIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  suggestionTextContent: {
+    flex: 1,
+  },
+  suggestionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  suggestionTitle: {
+    color: '#1F2937',
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8,
+  },
+  suggestionSubtitle: {
+    color: '#6B7280',
+    lineHeight: 16,
+  },
+  suggestionTypeBadge: {
+    height: 24,
+    borderRadius: 12,
+  },
+  suggestionTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  suggestionDivider: {
+    marginLeft: 68,
+    marginRight: 16,
+    backgroundColor: '#F3F4F6',
   },
   mapContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    margin: 8,
+    marginTop: 4,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   map: {
     flex: 1,
   },
-  markerContainer: {
+  mapOverlay: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  mapInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  mapInfoText: {
+    marginLeft: 8,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  mapInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapInfoText: {
+    marginLeft: 8,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  locationButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  locationButtonTouch: {
+    width: 56,
+    height: 56,
+  },
+  locationButtonGradient: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markerContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  markerGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   selectedMarker: {
     transform: [{ scale: 1.2 }],
