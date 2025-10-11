@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react"
-import { View, StyleSheet, ScrollView, Alert } from "react-native"
-import { Text, TextInput, Button, Card, Divider } from "react-native-paper"
+import { View, StyleSheet, Alert, Dimensions, Image } from "react-native"
+import { Text, TextInput, Button, Surface, Divider } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { LinearGradient } from "expo-linear-gradient"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
 import AccessibilityService from "../../services/AccessibilityService"
+
+const { height } = Dimensions.get('window')
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth()
@@ -56,31 +59,35 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView 
+    <LinearGradient
+      colors={['#FFFFFF', '#F8FAFC']}
       style={styles.container}
-      accessible={true}
-      accessibilityLabel="Login screen"
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        accessible={false}
-      >
-        <View 
-          style={styles.header}
-          accessible={true}
-          accessibilityRole="header"
-          accessibilityLabel="Welcome Back. Sign in to continue exploring accessible spaces"
-        >
-          <Text variant="headlineLarge" style={styles.title}>
-            Welcome Back
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
-            Sign in to continue exploring accessible spaces
-          </Text>
-        </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../../assets/AccessLanka Logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text variant="headlineMedium" style={styles.title}>
+              Welcome Back
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              Sign in to continue exploring accessible spaces
+            </Text>
+          </View>
 
-        <Card style={styles.card} accessible={false}>
-          <Card.Content style={styles.cardContent}>
+          {/* Login Form Card */}
+          <Surface style={styles.formCard} elevation={3}>
+            <Text variant="titleMedium" style={styles.formTitle}>
+              Sign In to Your Account
+            </Text>
+
             <TextInput
               label="Email"
               value={email}
@@ -89,9 +96,9 @@ export default function LoginScreen({ navigation }) {
               keyboardType="email-address"
               autoCapitalize="none"
               style={styles.input}
+              left={<TextInput.Icon icon="email-outline" />}
+              dense
               accessibilityLabel={AccessibilityService.inputLabel("Email", true, email)}
-              accessibilityHint="Enter your email address"
-              accessibilityRole="none"
             />
 
             <TextInput
@@ -101,6 +108,7 @@ export default function LoginScreen({ navigation }) {
               mode="outlined"
               secureTextEntry={!showPassword}
               style={styles.input}
+              left={<TextInput.Icon icon="lock-outline" />}
               right={
                 <TextInput.Icon
                   icon={showPassword ? "eye-off" : "eye"}
@@ -108,14 +116,11 @@ export default function LoginScreen({ navigation }) {
                     setShowPassword(!showPassword)
                     AccessibilityService.announce(showPassword ? "Password hidden" : "Password visible")
                   }}
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-                  accessibilityHint={AccessibilityService.buttonHint(showPassword ? "hide password" : "show password")}
-                  accessibilityRole="button"
+                  size={20}
                 />
               }
+              dense
               accessibilityLabel={AccessibilityService.inputLabel("Password", true)}
-              accessibilityHint="Enter your password"
-              accessibilityRole="none"
             />
 
             <Button
@@ -125,9 +130,8 @@ export default function LoginScreen({ navigation }) {
                 AccessibilityService.announceNavigation("Forgot Password")
               }}
               style={styles.forgotPassword}
-              accessibilityLabel="Forgot password"
-              accessibilityHint={AccessibilityService.buttonHint("go to password recovery")}
-              accessibilityRole="button"
+              textColor="#2E7D32"
+              compact
             >
               Forgot Password?
             </Button>
@@ -135,125 +139,133 @@ export default function LoginScreen({ navigation }) {
             <Button 
               mode="contained" 
               onPress={handleLogin} 
-              style={styles.loginButton} 
-              accessibilityLabel={loading ? "Signing in, please wait" : "Login"}
-              accessibilityHint={loading ? "" : AccessibilityService.buttonHint("sign in to your account")}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: loading, busy: loading }}
+              style={styles.loginButton}
+              contentStyle={styles.loginButtonContent}
               loading={loading}
               disabled={loading}
             >
-              {loading ? "Signing In..." : "Login"}
+              {loading ? "Signing In..." : "Sign In"}
             </Button>
 
-            <Divider style={styles.divider} {...AccessibilityService.ignoreProps()} />
+            <Divider style={styles.divider} />
 
-            <Button
-              mode="outlined"
-              onPress={() => {
-                AccessibilityService.announce("Google sign in not yet implemented")
-              }}
-              style={styles.socialButton}
-              icon={() => <Icon name="google" size={20} color="#DB4437" {...AccessibilityService.ignoreProps()} />}
-              accessibilityLabel="Continue with Google"
-              accessibilityHint={AccessibilityService.buttonHint("sign in using your Google account")}
-              accessibilityRole="button"
-            >
-              Continue with Google
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={() => {
-                AccessibilityService.announce("Facebook sign in not yet implemented")
-              }}
-              style={styles.socialButton}
-              icon={() => <Icon name="facebook" size={20} color="#4267B2" {...AccessibilityService.ignoreProps()} />}
-              accessibilityLabel="Continue with Facebook"
-              accessibilityHint={AccessibilityService.buttonHint("sign in using your Facebook account")}
-              accessibilityRole="button"
-            >
-              Continue with Facebook
-            </Button>
-          </Card.Content>
-        </Card>
-
-        <View 
-          style={styles.footer}
-          accessible={true}
-          accessibilityLabel="Don't have an account? Sign up"
-          accessibilityRole="none"
-        >
-          <Text variant="bodyMedium">Don't have an account? </Text>
-          <Button 
-            mode="text" 
-            onPress={() => {
-              navigation.navigate("Register")
-              AccessibilityService.announceNavigation("Register")
-            }}
-            accessibilityLabel="Sign up"
-            accessibilityHint={AccessibilityService.buttonHint("create a new account")}
-            accessibilityRole="button"
-          >
-            Sign Up
-          </Button>
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text variant="bodyMedium" style={styles.footerText}>
+                Don't have an account?
+              </Text>
+              <Button 
+                mode="text" 
+                onPress={() => {
+                  navigation.navigate("Register")
+                  AccessibilityService.announceNavigation("Register")
+                }}
+                compact
+                textColor="#2E7D32"
+              >
+                Sign Up
+              </Button>
+            </View>
+          </Surface>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    justifyContent: 'center',
   },
   header: {
     alignItems: "center",
     marginBottom: 32,
-    marginTop: 32,
+  },
+  logoContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
-    color: "#2E7D32",
+    color: "#1F2937",
     fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
-    color: "#666",
+    color: "#6B7280",
     textAlign: "center",
+    lineHeight: 20,
   },
-  card: {
-    elevation: 4,
-    marginBottom: 24,
-  },
-  cardContent: {
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 24,
+    marginBottom: 20,
+  },
+  formTitle: {
+    color: "#1F2937",
+    fontWeight: "600",
+    textAlign: 'center',
+    marginBottom: 24,
   },
   input: {
     marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    marginBottom: 24,
+    marginBottom: 20,
+    marginTop: -8,
   },
   loginButton: {
+    borderRadius: 25,
+    backgroundColor: '#2E7D32',
+    marginBottom: 20,
+  },
+  loginButtonContent: {
     paddingVertical: 8,
-    marginBottom: 24,
   },
   divider: {
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  socialSection: {
+    marginBottom: 20,
+  },
+  socialText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   socialButton: {
-    marginBottom: 12,
-    paddingVertical: 8,
+    flex: 1,
+    borderRadius: 12,
+    borderColor: '#E5E7EB',
+  },
+  socialButtonContent: {
+    paddingVertical: 4,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+  },
+  footerText: {
+    color: "#6B7280",
   },
 })

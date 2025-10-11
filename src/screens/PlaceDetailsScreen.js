@@ -822,33 +822,53 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
                           <View style={styles.contributionTypeHeader}>
                             <Icon name="star" size={20} color="#FF9800" />
                             <Text variant="titleSmall" style={styles.contributionTypeTitle}>
-                              Mapmission Ratings ({allAccessibilityContributions.ratings.length})
+                              Accessibility Features Rating ({allAccessibilityContributions.ratings.length} ratings)
                             </Text>
                           </View>
                           <View style={styles.ratingsGrid}>
-                            {['accessibility_rating', 'availability_rating', 'condition_rating'].map(ratingType => {
-                              const ratings = allAccessibilityContributions.ratings.map(r => r[ratingType]).filter(r => r > 0)
-                              const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0
+                            {(() => {
+                              // Group ratings by feature_type and calculate averages
+                              const featureRatings = {}
                               
-                              return avgRating > 0 ? (
-                                <View key={ratingType} style={styles.ratingItem}>
-                                  <Text style={styles.ratingLabel}>
-                                    {ratingType.replace(/_rating/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                  </Text>
-                                  <View style={styles.ratingStars}>
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                      <Icon
-                                        key={star}
-                                        name={star <= Math.round(avgRating) ? 'star' : 'star-outline'}
-                                        size={16}
-                                        color="#FF9800"
-                                      />
-                                    ))}
-                                    <Text style={styles.ratingValue}>({avgRating.toFixed(1)})</Text>
+                              allAccessibilityContributions.ratings.forEach(rating => {
+                                const featureType = rating.feature_type
+                                if (!featureRatings[featureType]) {
+                                  featureRatings[featureType] = {
+                                    totalRatings: [],
+                                    count: 0
+                                  }
+                                }
+                                
+                                // Calculate overall rating from accessibility, availability, and condition
+                                const overallRating = (
+                                  (rating.accessibility_rating || 0) + 
+                                  (rating.availability_rating || 0) + 
+                                  (rating.condition_rating || 0)
+                                ) / 3
+                                
+                                featureRatings[featureType].totalRatings.push(overallRating)
+                                featureRatings[featureType].count++
+                              })
+
+                              // Render features with their average ratings
+                              return Object.entries(featureRatings).map(([featureType, data]) => {
+                                const avgRating = data.totalRatings.reduce((sum, val) => sum + val, 0) / data.count
+
+                                return (
+                                  <View key={featureType} style={styles.featureRatingItem}>
+                                    <Text style={styles.ratingLabel}>
+                                      {featureType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </Text>
+                                    <View style={styles.ratingStars}>
+                                      {renderStars(avgRating)}
+                                      <Text style={styles.ratingValue}>
+                                        {avgRating.toFixed(1)} ({data.count})
+                                      </Text>
+                                    </View>
                                   </View>
-                                </View>
-                              ) : null
-                            })}
+                                )
+                              })
+                            })()}
                           </View>
                         </Card.Content>
                       </Card>
@@ -1466,6 +1486,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  featureRatingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9800',
   },
   ratingLabel: {
     fontSize: 14,

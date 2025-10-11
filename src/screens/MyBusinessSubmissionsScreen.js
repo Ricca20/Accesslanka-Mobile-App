@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, FlatList, Alert, RefreshControl, TouchableOpacity } from 'react-native'
-import { Text, Card, Button, ActivityIndicator, Chip, Badge, Divider, FAB } from 'react-native-paper'
+import { View, StyleSheet, FlatList, Alert, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native'
+import { Text, Card, Button, ActivityIndicator, Chip, Divider, FAB, Surface } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { useAuth } from '../context/AuthContext'
 import { DatabaseService } from '../lib/database'
@@ -142,26 +143,105 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
     }
 
     return (
-      <View style={styles.contributionStatsContainer}>
+      <Surface style={styles.contributionStatsCard} elevation={1}>
         <Text variant="titleSmall" style={styles.contributionStatsTitle}>
           MapMission Contributions
         </Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Icon name="camera" size={16} color="#EF4444" />
-            <Text style={styles.statText}>{photos?.length || 0} Photos</Text>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Icon name="camera" size={20} color="#EF4444" />
+            <Text variant="titleSmall" style={styles.statNumber}>{photos?.length || 0}</Text>
+            <Text variant="bodySmall" style={styles.statLabel}>Photos</Text>
           </View>
-          <View style={styles.statItem}>
-            <Icon name="comment-text" size={16} color="#3B82F6" />
-            <Text style={styles.statText}>{reviews?.length || 0} Reviews</Text>
+          <View style={styles.statCard}>
+            <Icon name="comment-text" size={20} color="#3B82F6" />
+            <Text variant="titleSmall" style={styles.statNumber}>{reviews?.length || 0}</Text>
+            <Text variant="bodySmall" style={styles.statLabel}>Reviews</Text>
           </View>
-          <View style={styles.statItem}>
-            <Icon name="star" size={16} color="#F59E0B" />
-            <Text style={styles.statText}>{ratings?.length || 0} Ratings</Text>
+          <View style={styles.statCard}>
+            <Icon name="star" size={20} color="#F59E0B" />
+            <Text variant="titleSmall" style={styles.statNumber}>{ratings?.length || 0}</Text>
+            <Text variant="bodySmall" style={styles.statLabel}>Ratings</Text>
           </View>
         </View>
-      </View>
+      </Surface>
     )
+  }
+
+  const renderAccessibilityFeatureRatings = (ratings) => {
+    // Group ratings by feature_type and calculate overall average
+    const featureRatings = {}
+    
+    ratings.forEach(rating => {
+      const featureType = rating.feature_type
+      if (!featureRatings[featureType]) {
+        featureRatings[featureType] = {
+          totalRatings: [],
+          count: 0
+        }
+      }
+      
+      // Calculate overall rating from accessibility, availability, and condition
+      const overallRating = (
+        (rating.accessibility_rating || 0) + 
+        (rating.availability_rating || 0) + 
+        (rating.condition_rating || 0)
+      ) / 3
+      
+      featureRatings[featureType].totalRatings.push(overallRating)
+      featureRatings[featureType].count++
+    })
+
+    // Calculate averages and render
+    return Object.entries(featureRatings).map(([featureType, data]) => {
+      const avgRating = data.totalRatings.reduce((sum, val) => sum + val, 0) / data.count
+
+      return (
+        <View key={featureType} style={styles.featureRatingItem}>
+          <View style={styles.featureRatingRow}>
+            <Text variant="bodyMedium" style={styles.featureRatingTitle}>
+              {featureType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </Text>
+            <View style={styles.starsContainer}>
+              {renderStars(avgRating)}
+              <Text variant="bodySmall" style={styles.ratingValue}>
+                {avgRating.toFixed(1)} 
+              </Text>
+            </View>
+          </View>
+        </View>
+      )
+    })
+  }
+
+  const renderStars = (rating) => {
+    const stars = []
+    const fullStars = Math.floor(rating)
+    const hasHalfStar = rating % 1 >= 0.5
+    
+    // Full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Icon key={`full-${i}`} name="star" size={14} color="#F59E0B" />
+      )
+    }
+    
+    // Half star
+    if (hasHalfStar) {
+      stars.push(
+        <Icon key="half" name="star-half-full" size={14} color="#F59E0B" />
+      )
+    }
+    
+    // Empty stars
+    const emptyStars = 5 - Math.ceil(rating)
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Icon key={`empty-${i}`} name="star-outline" size={14} color="#D1D5DB" />
+      )
+    }
+    
+    return <View style={styles.starsRow}>{stars}</View>
   }
 
   const renderExpandedContributions = (businessId) => {
@@ -177,60 +257,62 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
         {/* Reviews Section */}
         {reviews && reviews.length > 0 && (
           <View style={styles.contributionSection}>
-            <Text variant="titleSmall" style={styles.sectionTitle}>
-              <Icon name="comment-text" size={16} color="#3B82F6" /> Reviews ({reviews.length})
-            </Text>
-            {reviews.slice(0, 3).map((review, index) => (
-              <View key={review.id} style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewUserInfo}>
-                    <Text variant="bodySmall" style={styles.reviewUser}>
-                      {review.user_name || 'Anonymous User'}
-                    </Text>
-                    <UserBadge userId={review.user_id} size="tiny" />
-                  </View>
-                  <Chip 
-                    mode="flat" 
-                    compact 
-                    style={styles.featureChip}
-                    textStyle={styles.featureChipText}
-                  >
-                    {review.feature_type}
-                  </Chip>
-                </View>
-                <Text variant="bodySmall" style={styles.reviewText}>
-                  {review.review_text}
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Icon name="comment-text-outline" size={18} color="#3B82F6" />
+                <Text variant="titleSmall" style={styles.sectionTitle}>
+                  Community Reviews
                 </Text>
-                <View style={styles.reviewMeta}>
-                  <View style={styles.difficultyContainer}>
-                    <Text variant="bodySmall" style={styles.difficultyLabel}>
-                      Difficulty: 
-                    </Text>
-                    <Chip 
-                      mode="flat" 
-                      compact 
-                      style={[styles.difficultyChip, { 
-                        backgroundColor: review.difficulty_level === 'easy' ? '#D1FAE5' : 
-                                       review.difficulty_level === 'moderate' ? '#FEF3C7' : '#FEE2E2' 
-                      }]}
-                      textStyle={[styles.difficultyText, {
-                        color: review.difficulty_level === 'easy' ? '#065F46' : 
-                               review.difficulty_level === 'moderate' ? '#92400E' : '#991B1B'
-                      }]}
-                    >
-                      {review.difficulty_level}
-                    </Chip>
-                  </View>
-                  <Text variant="bodySmall" style={styles.reviewDate}>
-                    {formatDate(review.created_at)}
-                  </Text>
-                </View>
               </View>
-            ))}
+              <View style={styles.reviewsCount}>
+                <Text variant="bodySmall" style={styles.reviewsCountText}>
+                  {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.reviewsList}>
+              {reviews.slice(0, 3).map((review, index) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewCardHeader}>
+                    <View style={styles.reviewUserSection}>
+                      <View style={styles.userAvatar}>
+                        <Icon name="account" size={16} color="#6B7280" />
+                      </View>
+                      <View style={styles.userDetails}>
+                        <View style={styles.userNameRow}>
+                          <Text variant="bodySmall" style={styles.reviewUserName}>
+                            {review.user_name || 'Anonymous User'}
+                          </Text>
+                          <UserBadge userId={review.user_id} size="tiny" />
+                        </View>
+                        <Text variant="bodySmall" style={styles.reviewDate}>
+                          {formatDate(review.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    
+                  </View>
+                  
+                  <View style={styles.reviewContent}>
+                    <Text variant="bodyMedium" style={styles.reviewText}>
+                      "{review.review_text}"
+                    </Text>
+                  </View>
+                  
+                  
+                </View>
+              ))}
+            </View>
+            
             {reviews.length > 3 && (
-              <Text variant="bodySmall" style={styles.moreText}>
-                +{reviews.length - 3} more reviews
-              </Text>
+              <View style={styles.moreReviewsContainer}>
+                <Text variant="bodySmall" style={styles.moreReviewsText}>
+                  +{reviews.length - 3} more review{reviews.length - 3 !== 1 ? 's' : ''} available
+                </Text>
+                <Icon name="chevron-right" size={16} color="#6366F1" />
+              </View>
             )}
           </View>
         )}
@@ -239,82 +321,9 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
         {ratings && ratings.length > 0 && (
           <View style={styles.contributionSection}>
             <Text variant="titleSmall" style={styles.sectionTitle}>
-              <Icon name="star" size={16} color="#F59E0B" /> Ratings ({ratings.length})
+              <Icon name="star" size={16} color="#F59E0B" /> Accessibility  Rating ({ratings.length})
             </Text>
-            {ratings.slice(0, 3).map((rating, index) => (
-              <View key={rating.id} style={styles.ratingItem}>
-                <View style={styles.ratingHeader}>
-                  <View style={styles.reviewUserInfo}>
-                    <Text variant="bodySmall" style={styles.reviewUser}>
-                      {rating.user_name || 'Anonymous User'}
-                    </Text>
-                    <UserBadge userId={rating.user_id} size="tiny" />
-                  </View>
-                  <Chip 
-                    mode="flat" 
-                    compact 
-                    style={styles.featureChip}
-                    textStyle={styles.featureChipText}
-                  >
-                    {rating.feature_type}
-                  </Chip>
-                </View>
-                <View style={styles.ratingScores}>
-                  <View style={styles.ratingScore}>
-                    <Text variant="bodySmall" style={styles.ratingLabel}>Accessibility:</Text>
-                    <View style={styles.stars}>
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Icon 
-                          key={star} 
-                          name={star <= rating.accessibility_rating ? "star" : "star-outline"} 
-                          size={14} 
-                          color="#F59E0B" 
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  <View style={styles.ratingScore}>
-                    <Text variant="bodySmall" style={styles.ratingLabel}>Availability:</Text>
-                    <View style={styles.stars}>
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Icon 
-                          key={star} 
-                          name={star <= rating.availability_rating ? "star" : "star-outline"} 
-                          size={14} 
-                          color="#F59E0B" 
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  <View style={styles.ratingScore}>
-                    <Text variant="bodySmall" style={styles.ratingLabel}>Condition:</Text>
-                    <View style={styles.stars}>
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Icon 
-                          key={star} 
-                          name={star <= rating.condition_rating ? "star" : "star-outline"} 
-                          size={14} 
-                          color="#F59E0B" 
-                        />
-                      ))}
-                    </View>
-                  </View>
-                </View>
-                {rating.notes && (
-                  <Text variant="bodySmall" style={styles.ratingNotes}>
-                    Note: {rating.notes}
-                  </Text>
-                )}
-                <Text variant="bodySmall" style={styles.reviewDate}>
-                  {formatDate(rating.created_at)}
-                </Text>
-              </View>
-            ))}
-            {ratings.length > 3 && (
-              <Text variant="bodySmall" style={styles.moreText}>
-                +{ratings.length - 3} more ratings
-              </Text>
-            )}
+            {renderAccessibilityFeatureRatings(ratings)}
           </View>
         )}
 
@@ -327,6 +336,40 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
             <Text variant="bodySmall" style={styles.photoSummary}>
               {photos.length} accessibility photos submitted by MapMission participants
             </Text>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.photosScrollView}
+              contentContainerStyle={styles.photosContainer}
+            >
+              {photos.slice(0, 10).map((photo, index) => (
+                <View key={photo.id} style={styles.photoItem}>
+                  <Image 
+                    source={{ uri: photo.photo_url }} 
+                    style={styles.photoImage}
+                    resizeMode="cover"
+                    onError={() => {
+                      console.log('Failed to load image:', photo.photo_url)
+                    }}
+                  />
+                  <View style={styles.photoImageFallback}>
+                    <Icon name="image-off" size={24} color="#9CA3AF" />
+                  </View>
+                  <View style={styles.photoOverlay}>
+                    <Text variant="bodySmall" style={styles.photoUser}>
+                      {photo.user_name || 'Anonymous'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            
+            {photos.length > 10 && (
+              <Text variant="bodySmall" style={styles.morePhotosText}>
+                +{photos.length - 10} more photos
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -343,8 +386,8 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
     ) > 0
 
     return (
-      <Card style={styles.submissionCard}>
-        <Card.Content>
+      <Surface style={styles.submissionCard} elevation={2}>
+        <View style={styles.submissionContent}>
           <View style={styles.submissionHeader}>
             <View style={styles.businessInfo}>
               <Text variant="titleMedium" style={styles.businessName}>
@@ -379,8 +422,8 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
             {item.phone && (
               <View style={styles.detailRow}>
                 <Icon name="phone-outline" size={16} color="#2E7D32" />
-                <Text variant="bodySmall" style={styles.detailText}>
-                  {item.phone}
+                <Text variant="bodySmall" style={styles.detailText}  >
+                  {item.phone} 
                 </Text>
               </View>
             )}
@@ -455,71 +498,84 @@ export default function MyBusinessSubmissionsScreen({ navigation }) {
               </Button>
             </View>
           )}
-        </Card.Content>
-      </Card>
+        </View>
+      </Surface>
     )
   }
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
-          <Text style={{ marginTop: 16 }}>Loading your submissions...</Text>
-        </View>
-      </SafeAreaView>
+      <LinearGradient
+        colors={['#F8FAFC', '#EBF8FF']}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#2E7D32" />
+            <Text style={{ marginTop: 16 }}>Loading your submissions...</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={submissions}
-        renderItem={renderSubmission}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.centerContainer}>
-            <Icon name="store-outline" size={64} color="#ccc" />
-            <Text variant="titleMedium" style={styles.emptyTitle}>
-              No business submissions yet
-            </Text>
-            <Text variant="bodyMedium" style={styles.emptyText}>
-              Submit your business to be listed on AccessLanka and help build an accessible community!
-            </Text>
-            <Button
-              mode="contained"
-              onPress={() => navigation.navigate('AddMyBusiness')}
-              style={styles.addButton}
-              labelStyle={styles.addButtonText}
-              icon="store-plus"
-            >
-              Add My Business
-            </Button>
-          </View>
-        }
-      />
-      
-      {/* Floating Action Button for Adding New Business */}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => navigation.navigate('AddMyBusiness')}
-        label="Add Business"
-        color="#fff"
-      />
-    </SafeAreaView>
+    <LinearGradient
+      colors={['#F8FAFC', '#EBF8FF']}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <FlatList
+          data={submissions}
+          renderItem={renderSubmission}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          ListEmptyComponent={
+            <View style={styles.centerContainer}>
+              <Icon name="store-outline" size={64} color="#ccc" />
+              <Text variant="titleMedium" style={styles.emptyTitle}>
+                No business submissions yet
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptyText}>
+                Submit your business to be listed on AccessLanka and help build an accessible community!
+              </Text>
+              <Button
+                mode="contained"
+                onPress={() => navigation.navigate('AddMyBusiness')}
+                style={styles.addButton}
+                labelStyle={styles.addButtonText}
+                icon="store-plus"
+              >
+                Add My Business
+              </Button>
+            </View>
+          }
+        />
+        
+        {/* Floating Action Button for Adding New Business */}
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => navigation.navigate('AddMyBusiness')}
+          label="Add Business"
+          color="#fff"
+        />
+      </SafeAreaView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F8FAFC",
+  },
+  safeArea: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -527,26 +583,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  header: {
-    padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-  },
-  title: {
-    color: '#2E7D32',
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    color: '#666',
-    marginTop: 4,
-  },
   listContainer: {
-    padding: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     flexGrow: 1,
   },
   submissionCard: {
-    marginBottom: 16,
-    elevation: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  submissionContent: {
+    padding: 20,
   },
   submissionHeader: {
     flexDirection: 'row',
@@ -559,18 +609,18 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   businessName: {
-    color: '#2E7D32',
+    color: '#1F2937',
     fontWeight: 'bold',
   },
   businessCategory: {
-    color: '#666',
+    color: '#6B7280',
     marginTop: 2,
   },
   statusChip: {
     alignSelf: 'flex-start',
   },
   businessDescription: {
-    color: '#666',
+    color: '#6B7280',
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -583,7 +633,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailText: {
-    color: '#666',
+    color: '#2E7D32',
     marginLeft: 8,
     flex: 1,
   },
@@ -599,41 +649,49 @@ const styles = StyleSheet.create({
   contributionsContainer: {
     marginBottom: 12,
   },
-  contributionStatsContainer: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+  contributionStatsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
   },
   contributionStatsTitle: {
     color: '#1F2937',
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  statsRow: {
+  statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    gap: 12,
   },
-  statItem: {
-    flexDirection: 'row',
+  statCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  statText: {
-    color: '#374151',
-    fontSize: 12,
-    fontWeight: '500',
+  statNumber: {
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  statLabel: {
+    color: '#6B7280',
+    textAlign: 'center',
+    fontSize: 10,
   },
   noContributionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     gap: 8,
   },
   noContributionsText: {
-    color: '#666',
+    color: '#6B7280',
     fontStyle: 'italic',
   },
   expandButton: {
@@ -656,108 +714,166 @@ const styles = StyleSheet.create({
   contributionSection: {
     marginBottom: 16,
   },
-  sectionTitle: {
-    color: '#1F2937',
-    fontWeight: '600',
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewItem: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3B82F6',
-  },
-  reviewHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  reviewUserInfo: {
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitle: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  reviewsCount: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  reviewsCountText: {
+    color: '#3B82F6',
+    fontWeight: '500',
+    fontSize: 11,
+  },
+  reviewsList: {
+    gap: 12,
+  },
+  reviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  reviewCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  reviewUserSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 2,
   },
-  reviewUser: {
+  reviewUserName: {
     color: '#1F2937',
     fontWeight: '600',
-  },
-  featureChip: {
-    backgroundColor: '#E5E7EB',
-    height: 24,
-  },
-  featureChipText: {
-    fontSize: 11,
-    color: '#374151',
-  },
-  reviewText: {
-    color: '#374151',
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  reviewMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  difficultyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  difficultyLabel: {
-    color: '#6B7280',
-  },
-  difficultyChip: {
-    height: 20,
-  },
-  difficultyText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
   },
   reviewDate: {
     color: '#9CA3AF',
+    fontSize: 11,
   },
-  ratingItem: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#F59E0B',
-  },
-  ratingHeader: {
+  reviewFeatureTag: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  reviewFeatureText: {
+    color: '#6366F1',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  reviewContent: {
     marginBottom: 12,
   },
-  ratingScores: {
-    gap: 8,
-    marginBottom: 8,
+  reviewText: {
+    color: '#374151',
+    lineHeight: 20,
+    fontSize: 14,
+    fontStyle: 'italic',
   },
-  ratingScore: {
+  reviewFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
-  ratingLabel: {
-    color: '#374151',
-    fontWeight: '500',
-    flex: 1,
-  },
-  stars: {
+  difficultyIndicator: {
     flexDirection: 'row',
-    gap: 2,
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  ratingNotes: {
-    color: '#6B7280',
-    fontStyle: 'italic',
-    marginBottom: 4,
+  difficultyText: {
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  helpfulnessIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  helpfulnessText: {
+    color: '#F59E0B',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  moreReviewsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    gap: 4,
+  },
+  moreReviewsText: {
+    color: '#6366F1',
+    fontWeight: '500',
   },
   photoSummary: {
     color: '#6B7280',
@@ -766,12 +882,68 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderLeftWidth: 3,
     borderLeftColor: '#EF4444',
+    marginBottom: 12,
   },
-  moreText: {
-    color: '#6366F1',
+  photosScrollView: {
+    marginVertical: 8,
+  },
+  photosContainer: {
+    paddingHorizontal: 4,
+    gap: 12,
+  },
+  photoItem: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoImageFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    zIndex: -1,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 6,
+    gap: 4,
+  },
+  photoUser: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  photoFeatureChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    height: 18,
+    alignSelf: 'flex-start',
+  },
+  photoFeatureText: {
+    fontSize: 9,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  morePhotosText: {
+    color: '#EF4444',
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
+    fontWeight: '500',
   },
   approvedActions: {
     flexDirection: 'row',
@@ -790,12 +962,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   emptyTitle: {
-    color: '#666',
+    color: '#6B7280',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
-    color: '#999',
+    color: '#9CA3AF',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -812,5 +984,38 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#2E7D32',
+  },
+  featureRatingItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  featureRatingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  featureRatingTitle: {
+    color: '#1F2937',
+    fontWeight: '600',
+    flex: 1,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  ratingValue: {
+    color: '#1F2937',
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'right',
   },
 })

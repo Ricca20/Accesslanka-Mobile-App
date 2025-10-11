@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react"
-import { View, StyleSheet, ScrollView, Alert } from "react-native"
-import { Text, TextInput, Button, Card, Checkbox } from "react-native-paper"
+import { View, StyleSheet, Alert, Dimensions } from "react-native"
+import { Text, TextInput, Button, Surface, Chip } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { LinearGradient } from "expo-linear-gradient"
+import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
 import AccessibilityService from "../../services/AccessibilityService"
+
+const { height } = Dimensions.get('window')
 
 export default function RegisterScreen({ navigation }) {
   const { signUp } = useAuth()
@@ -21,6 +25,38 @@ export default function RegisterScreen({ navigation }) {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Accessibility options with icons and colors
+  const accessibilityOptions = [
+    { 
+      key: 'mobility', 
+      label: 'Mobility', 
+      icon: 'wheelchair-accessibility', 
+      color: '#2E7D32',
+      description: 'Wheelchair access',
+    },
+    { 
+      key: 'visual', 
+      label: 'Visual', 
+      icon: 'eye', 
+      color: '#1976D2',
+      description: 'Vision assistance'
+    },
+    { 
+      key: 'hearing', 
+      label: 'Hearing', 
+      icon: 'ear-hearing', 
+      color: '#7B1FA2',
+      description: 'Hearing assistance'
+    },
+    { 
+      key: 'cognitive', 
+      label: 'Cognitive', 
+      icon: 'brain', 
+      color: '#F57C00',
+      description: 'Cognitive support'
+    },
+  ]
 
   useEffect(() => {
     // Announce screen name when component mounts
@@ -173,231 +209,278 @@ export default function RegisterScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView 
+    <LinearGradient
+      colors={['#FFFFFF', '#F8FAFC']}
       style={styles.container}
-      accessible={true}
-      accessibilityLabel="Register screen"
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        accessible={false}
-      >
-        <View 
-          style={styles.header}
-          accessible={true}
-          accessibilityRole="header"
-          accessibilityLabel="Join AccessLanka. Help build a more accessible Sri Lanka"
-        >
-          <Text variant="headlineLarge" style={styles.title}>
-            Join AccessLanka
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
-            Help build a more accessible Sri Lanka
-          </Text>
-        </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text variant="headlineMedium" style={styles.title1}>
+              Join Access<Text variant="headlineMedium" style={styles.title2}>Lanka</Text>
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              Help build a more accessible Sri Lanka
+            </Text>
+          </View>
 
-        <Card style={styles.card} accessible={false}>
-          <Card.Content style={styles.cardContent}>
-            <TextInput
-              label="Full Name"
-              value={formData.name}
-              onChangeText={(value) => updateFormData("name", value)}
-              mode="outlined"
-              style={styles.input}
-              accessibilityLabel={AccessibilityService.inputLabel("Full name", true, formData.name)}
-              accessibilityHint="Enter your full name"
-              accessibilityRole="none"
-            />
+          {/* Form Card */}
+          <Surface style={styles.formCard} elevation={3}>
+            {/* Basic Info Row */}
+            <View style={styles.inputRow}>
+              <TextInput
+                label="Full Name"
+                value={formData.name}
+                onChangeText={(value) => updateFormData("name", value)}
+                mode="outlined"
+                style={[styles.input, styles.halfInput]}
+                dense
+                accessibilityLabel={AccessibilityService.inputLabel("Full name", true, formData.name)}
+              />
+            </View>
+            <View style={styles.inputRow}>
+              <TextInput
+                label="Email"
+                value={formData.email}
+                onChangeText={(value) => updateFormData("email", value)}
+                mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={[styles.input, styles.halfInput]}
+                dense
+                accessibilityLabel={AccessibilityService.inputLabel("Email", true, formData.email)}
+              />
+            </View>
 
-            <TextInput
-              label="Email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData("email", value)}
-              mode="outlined"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
-              accessibilityLabel={AccessibilityService.inputLabel("Email", true, formData.email)}
-              accessibilityHint="Enter your email address"
-              accessibilityRole="none"
-            />
+            {/* Password Row */}
+            <View style={styles.inputRow}>
+              <TextInput
+                label="Password"
+                value={formData.password}
+                onChangeText={(value) => updateFormData("password", value)}
+                mode="outlined"
+                secureTextEntry={!showPassword}
+                style={[styles.input, styles.halfInput]}
+                dense
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? "eye-off" : "eye"}
+                    onPress={() => setShowPassword(!showPassword)}
+                    size={20}
+                  />
+                }
+                accessibilityLabel={AccessibilityService.inputLabel("Password", true)}
+              />
+            </View>
+            <View style={styles.inputRow}>
+              <TextInput
+                label="Confirm Password"
+                value={formData.confirmPassword}
+                onChangeText={(value) => updateFormData("confirmPassword", value)}
+                mode="outlined"
+                secureTextEntry={!showPassword}
+                style={[styles.input, styles.halfInput]}
+                dense
+                accessibilityLabel={AccessibilityService.inputLabel("Confirm password", true)}
+              />
+            </View>
 
-            <TextInput
-              label="Password"
-              value={formData.password}
-              onChangeText={(value) => updateFormData("password", value)}
-              mode="outlined"
-              secureTextEntry={!showPassword}
-              style={styles.input}
-              right={
-                <TextInput.Icon
-                  icon={showPassword ? "eye-off" : "eye"}
-                  onPress={() => {
-                    setShowPassword(!showPassword)
-                    AccessibilityService.announce(showPassword ? "Password hidden" : "Password visible")
-                  }}
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-                  accessibilityHint={AccessibilityService.buttonHint(showPassword ? "hide password" : "show password")}
-                  accessibilityRole="button"
-                />
-              }
-              accessibilityLabel={AccessibilityService.inputLabel("Password", true)}
-              accessibilityHint="Enter a password, at least 6 characters"
-              accessibilityRole="none"
-            />
-
-            <TextInput
-              label="Confirm Password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => updateFormData("confirmPassword", value)}
-              mode="outlined"
-              secureTextEntry={!showPassword}
-              style={styles.input}
-              accessibilityLabel={AccessibilityService.inputLabel("Confirm password", true)}
-              accessibilityHint="Re-enter your password"
-              accessibilityRole="none"
-            />
-
-            <View
-              accessible={true}
-              accessibilityRole="header"
-              accessibilityLabel="Accessibility Preferences section. Optional. Help us personalize your experience"
-            >
-              <Text variant="titleMedium" style={styles.sectionTitle}>
+            {/* Accessibility Preferences */}
+            <View style={styles.accessibilitySection}>
+              <Text variant="titleSmall" style={styles.sectionTitle}>
                 Accessibility Preferences (Optional)
               </Text>
-              <Text variant="bodySmall" style={styles.sectionSubtitle}>
-                Help us personalize your experience
-              </Text>
+              <View style={styles.chipGrid}>
+                <View style={styles.chipRow}>
+                  {accessibilityOptions.slice(0, 2).map((option) => (
+                    <Chip
+                      key={option.key}
+                      icon={({ size }) => (
+                        <Icon 
+                          name={option.icon} 
+                          size={24} 
+                          color={disabilities[option.key] ? option.color : '#6B7280'} 
+                        />
+                      )}
+                      selected={disabilities[option.key]}
+                      onPress={() => updateDisabilities(option.key)}
+                      style={[
+                        styles.accessibilityChip,
+                        disabilities[option.key] && { 
+                          backgroundColor: option.color + '20',
+                          borderColor: option.color 
+                        }
+                      ]}
+                      textStyle={[
+                        styles.chipText,
+                        disabilities[option.key] && { color: option.color }
+                      ]}
+                      showSelectedOverlay
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
+                </View>
+                <View style={styles.chipRow}>
+                  {accessibilityOptions.slice(2, 4).map((option) => (
+                    <Chip
+                      key={option.key}
+                      icon={({ size }) => (
+                        <Icon 
+                          name={option.icon} 
+                          size={24} 
+                          color={disabilities[option.key] ? option.color : '#6B7280'} 
+                        />
+                      )}
+                      selected={disabilities[option.key]}
+                      onPress={() => updateDisabilities(option.key)}
+                      style={[
+                        styles.accessibilityChip,
+                        disabilities[option.key] && { 
+                          backgroundColor: option.color + '20',
+                          borderColor: option.color 
+                        }
+                      ]}
+                      textStyle={[
+                        styles.chipText,
+                        disabilities[option.key] && { color: option.color }
+                      ]}
+                      showSelectedOverlay
+                    >
+                      {option.label}
+                    </Chip>
+                  ))}
+                </View>
+              </View>
             </View>
 
-            <View style={styles.checkboxContainer} accessible={false}>
-              <Checkbox.Item
-                label="Mobility accessibility"
-                status={disabilities.mobility ? "checked" : "unchecked"}
-                onPress={() => updateDisabilities("mobility")}
-                accessibilityLabel={`Mobility accessibility preference, ${disabilities.mobility ? 'checked' : 'unchecked'}`}
-                accessibilityHint={AccessibilityService.buttonHint(disabilities.mobility ? 'unselect mobility accessibility' : 'select mobility accessibility')}
-                accessibilityRole="checkbox"
-              />
-              <Checkbox.Item
-                label="Visual accessibility"
-                status={disabilities.visual ? "checked" : "unchecked"}
-                onPress={() => updateDisabilities("visual")}
-                accessibilityLabel={`Visual accessibility preference, ${disabilities.visual ? 'checked' : 'unchecked'}`}
-                accessibilityHint={AccessibilityService.buttonHint(disabilities.visual ? 'unselect visual accessibility' : 'select visual accessibility')}
-                accessibilityRole="checkbox"
-              />
-              <Checkbox.Item
-                label="Hearing accessibility"
-                status={disabilities.hearing ? "checked" : "unchecked"}
-                onPress={() => updateDisabilities("hearing")}
-                accessibilityLabel={`Hearing accessibility preference, ${disabilities.hearing ? 'checked' : 'unchecked'}`}
-                accessibilityHint={AccessibilityService.buttonHint(disabilities.hearing ? 'unselect hearing accessibility' : 'select hearing accessibility')}
-                accessibilityRole="checkbox"
-              />
-              <Checkbox.Item
-                label="Cognitive accessibility"
-                status={disabilities.cognitive ? "checked" : "unchecked"}
-                onPress={() => updateDisabilities("cognitive")}
-                accessibilityLabel={`Cognitive accessibility preference, ${disabilities.cognitive ? 'checked' : 'unchecked'}`}
-                accessibilityHint={AccessibilityService.buttonHint(disabilities.cognitive ? 'unselect cognitive accessibility' : 'select cognitive accessibility')}
-                accessibilityRole="checkbox"
-              />
-            </View>
-
+            {/* Register Button */}
             <Button
               mode="contained"
               onPress={handleRegister}
               style={styles.registerButton}
-              accessibilityLabel={loading ? "Creating account, please wait" : "Create account"}
-              accessibilityHint={loading ? "" : AccessibilityService.buttonHint("create your new account")}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: loading, busy: loading }}
+              contentStyle={styles.registerButtonContent}
               loading={loading}
               disabled={loading}
             >
               {loading ? "Creating Account..." : "Create Account"}
             </Button>
-          </Card.Content>
-        </Card>
 
-        <View 
-          style={styles.footer}
-          accessible={true}
-          accessibilityLabel="Already have an account? Login"
-          accessibilityRole="none"
-        >
-          <Text variant="bodyMedium">Already have an account? </Text>
-          <Button 
-            mode="text" 
-            onPress={() => {
-              navigation.navigate("Login")
-              AccessibilityService.announceNavigation("Login")
-            }}
-            accessibilityLabel="Login"
-            accessibilityHint={AccessibilityService.buttonHint("go to login screen")}
-            accessibilityRole="button"
-          >
-            Login
-          </Button>
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text variant="bodyMedium" style={styles.footerText}>
+                Already have an account?
+              </Text>
+              <Button 
+                mode="text" 
+                onPress={() => navigation.navigate("Login")}
+                compact
+                textColor="#2E7D32"
+              >
+                Login
+              </Button>
+            </View>
+          </Surface>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    justifyContent: 'center',
   },
   header: {
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 16,
+    marginBottom: 24,
   },
-  title: {
+  title1: {
+    color: "#1F2937",
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+    title2: {
     color: "#2E7D32",
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   subtitle: {
-    color: "#666",
+    color: "#6B7280",
     textAlign: "center",
   },
-  card: {
-    elevation: 4,
-    marginBottom: 24,
-  },
-  cardContent: {
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 24,
+    marginBottom: 20,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
   },
   input: {
-    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
-  sectionTitle: {
-    marginTop: 16,
-    marginBottom: 4,
-    color: "#2E7D32",
+  halfInput: {
+    flex: 1,
   },
-  sectionSubtitle: {
-    marginBottom: 16,
-    color: "#666",
-  },
-  checkboxContainer: {
+  accessibilitySection: {
     marginBottom: 24,
   },
+  sectionTitle: {
+    color: "#1F2937",
+    fontWeight: "600",
+    marginBottom: 16,
+    textAlign: 'flex-start',
+    marginTop: 8,
+  },
+  chipGrid: {
+    gap: 12,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  accessibilityChip: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   registerButton: {
+    borderRadius: 25,
+    backgroundColor: '#2E7D32',
+    marginBottom: 16,
+  },
+  registerButtonContent: {
     paddingVertical: 8,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+  },
+  footerText: {
+    color: "#6B7280",
   },
 })

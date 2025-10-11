@@ -298,7 +298,7 @@ export default function AddMyBusinessScreen({ navigation }) {
           <SectionHeader 
             title="Basic Information" 
             section="basic" 
-            icon="store"
+            icon="information-outline"
           />
           
           {activeSection === 'basic' && (
@@ -532,7 +532,7 @@ export default function AddMyBusinessScreen({ navigation }) {
           <SectionHeader 
             title="Accessibility Features" 
             section="accessibility" 
-            icon="accessibility"
+            icon="wheelchair-accessibility"
           />
           
           {activeSection === 'accessibility' && (

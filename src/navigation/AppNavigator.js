@@ -4,6 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { ActivityIndicator, View, Text } from "react-native"
 import AccessibilityService from "../services/AccessibilityService"
 
+import SplashScreen from "../screens/SplashScreen"
+import IntroSlidesScreen from "../screens/IntroSlidesScreen"
 import OnboardingScreen from "../screens/OnboardingScreen"
 import LandingScreen from "../screens/LandingScreen"
 import LoginScreen from "../screens/auth/LoginScreen"
@@ -18,6 +20,8 @@ const Stack = createStackNavigator()
 export default function AppNavigator() {
   const { user, loading } = useAuth()
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null)
+  const [showSplash, setShowSplash] = useState(true)
+  const [showIntroSlides, setShowIntroSlides] = useState(false)
 
   useEffect(() => {
     checkOnboardingStatus()
@@ -31,6 +35,25 @@ export default function AppNavigator() {
       console.error('Error checking onboarding status:', error)
       setHasSeenOnboarding(false)
     }
+  }
+
+  const handleSplashComplete = () => {
+    setShowSplash(false)
+    setShowIntroSlides(true)
+  }
+
+  const handleIntroSlidesComplete = () => {
+    setShowIntroSlides(false)
+  }
+
+  // Show splash screen first
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />
+  }
+
+  // Show intro slides after splash
+  if (showIntroSlides) {
+    return <IntroSlidesScreen onComplete={handleIntroSlidesComplete} />
   }
 
   // Show loading screen while checking auth status and onboarding
@@ -58,16 +81,14 @@ export default function AppNavigator() {
         // User is authenticated
         <Stack.Screen name="Main" component={MainTabNavigator} />
       ) : (
-        // User is not authenticated
+        // User is not authenticated - go directly to Register
         <>
-          {!hasSeenOnboarding && (
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          )}
-          <Stack.Screen name="Landing" component={LandingScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Landing" component={LandingScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         </>
       )}
     </Stack.Navigator>

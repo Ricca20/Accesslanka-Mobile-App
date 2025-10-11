@@ -1,9 +1,12 @@
 import { useState } from "react"
-import { View, StyleSheet, ScrollView, Alert } from "react-native"
-import { Text, TextInput, Button, Card } from "react-native-paper"
+import { View, StyleSheet, Alert, Dimensions } from "react-native"
+import { Text, TextInput, Button, Surface } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { LinearGradient } from "expo-linear-gradient"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
+
+const { height } = Dimensions.get('window')
 
 export default function ForgotPasswordScreen({ navigation }) {
   const { resetPassword } = useAuth()
@@ -51,157 +54,258 @@ export default function ForgotPasswordScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Icon name="lock-reset" size={64} color="#2E7D32" style={styles.icon} />
-          <Text variant="headlineLarge" style={styles.title}>
-            Forgot Password?
-          </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
-            {emailSent 
-              ? "Check your email for a reset link"
-              : "Enter your email address and we'll send you a link to reset your password"
-            }
-          </Text>
-        </View>
-
-        {!emailSent && (
-          <Card style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <TextInput
-                label="Email"
-                value={email}
-                onChangeText={setEmail}
-                mode="outlined"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-                accessibilityLabel="Email input field"
-                disabled={loading}
+    <LinearGradient
+      colors={['#FFFFFF', '#F8FAFC']}
+      style={styles.container}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={[
+              styles.iconContainer,
+              { backgroundColor: emailSent ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }
+            ]}>
+              <Icon 
+                name={emailSent ? "check-circle" : "lock-reset"} 
+                size={64} 
+                color={emailSent ? "#10B981" : "#EF4444"} 
               />
+            </View>
+            <Text variant="headlineMedium" style={styles.title}>
+              {emailSent ? "Check Your Email" : "Forgot Password?"}
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              {emailSent 
+                ? "We've sent a password reset link to your email"
+                : "Enter your email and we'll send you a reset link"
+              }
+            </Text>
+          </View>
 
-              <Button 
-                mode="contained" 
-                onPress={handleResetPassword} 
-                style={styles.resetButton} 
-                accessibilityLabel="Send reset link button"
-                loading={loading}
-                disabled={loading}
-              >
-                {loading ? "Sending..." : "Send Reset Link"}
-              </Button>
+          {/* Form Card */}
+          <Surface style={styles.formCard} elevation={4}>
+            {!emailSent ? (
+              <>
+                <View style={styles.formHeader}>
+                  <Text variant="titleLarge" style={styles.formTitle}>
+                    Reset Your Password
+                  </Text>
+                  <Text variant="bodySmall" style={styles.formSubtitle}>
+                    We'll send you a secure link to reset your password
+                  </Text>
+                </View>
 
-              <Button
-                mode="text"
-                onPress={() => navigation.navigate("Login")}
-                style={styles.backButton}
-                accessibilityLabel="Back to login"
-                disabled={loading}
-              >
-                Back to Login
-              </Button>
-            </Card.Content>
-          </Card>
-        )}
+                <TextInput
+                  label="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  mode="outlined"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.input}
+                  left={<TextInput.Icon icon="email-outline" />}
+                  dense
+                  disabled={loading}
+                />
 
-        {emailSent && (
-          <Card style={styles.card}>
-            <Card.Content style={styles.cardContent}>
-              <View style={styles.successContainer}>
-                <Icon name="check-circle" size={64} color="#2E7D32" />
-                <Text variant="bodyLarge" style={styles.successText}>
-                  If an account exists with the email {email}, you will receive a password reset link shortly.
-                </Text>
-                <Text variant="bodyMedium" style={styles.instructionText}>
-                  Please check your inbox and spam folder.
-                </Text>
-              </View>
+                <Button 
+                  mode="contained" 
+                  onPress={handleResetPassword} 
+                  style={styles.resetButton}
+                  contentStyle={styles.resetButtonContent}
+                  loading={loading}
+                  disabled={loading}
+                  icon="send"
+                >
+                  {loading ? "Sending..." : "Send Reset Link"}
+                </Button>
 
-              <Button
-                mode="contained"
-                onPress={() => navigation.navigate("Login")}
-                style={styles.resetButton}
-                accessibilityLabel="Return to login"
-              >
-                Return to Login
-              </Button>
+                <Button
+                  mode="text"
+                  onPress={() => navigation.navigate("Login")}
+                  style={styles.backButton}
+                  textColor="#6B7280"
+                  disabled={loading}
+                  icon="arrow-left"
+                >
+                  Back to Login
+                </Button>
+              </>
+            ) : (
+              <>
+                <View style={styles.successContent}>
+                  <Text variant="titleLarge" style={styles.successTitle}>
+                    Email Sent Successfully!
+                  </Text>
+                  <Text variant="bodyLarge" style={styles.successText}>
+                    If an account exists with <Text style={styles.emailText}>{email}</Text>, you will receive a password reset link shortly.
+                  </Text>
+                  <View style={styles.instructionBox}>
+                    <Icon name="information-outline" size={20} color="#6B7280" />
+                    <Text variant="bodyMedium" style={styles.instructionText}>
+                      Please check your inbox and spam folder
+                    </Text>
+                  </View>
+                </View>
 
-              <Button
-                mode="text"
-                onPress={() => {
-                  setEmailSent(false)
-                  setEmail("")
-                }}
-                style={styles.backButton}
-                accessibilityLabel="Try another email"
-              >
-                Try Another Email
-              </Button>
-            </Card.Content>
-          </Card>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                <View style={styles.actionButtons}>
+                  <Button
+                    mode="contained"
+                    onPress={() => navigation.navigate("Login")}
+                    style={styles.resetButton}
+                    contentStyle={styles.resetButtonContent}
+                    icon="login"
+                  >
+                    Return to Login
+                  </Button>
+
+                  <Button
+                    mode="outlined"
+                    onPress={() => {
+                      setEmailSent(false)
+                      setEmail("")
+                    }}
+                    style={styles.tryAgainButton}
+                    textColor="#2E7D32"
+                    icon="email-edit"
+                  >
+                    Try Another Email
+                  </Button>
+                </View>
+              </>
+            )}
+          </Surface>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
+  safeArea: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    justifyContent: 'center',
   },
   header: {
     alignItems: "center",
-    marginBottom: 32,
-    marginTop: 32,
+    marginBottom: 40,
   },
-  icon: {
-    marginBottom: 16,
+  iconContainer: {
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 60,
+    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    color: "#2E7D32",
+    color: "#1F2937",
     fontWeight: "bold",
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    color: "#666",
+    color: "#6B7280",
     textAlign: "center",
+    lineHeight: 20,
     paddingHorizontal: 16,
   },
-  card: {
-    elevation: 4,
-    marginBottom: 24,
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 28,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
   },
-  cardContent: {
-    padding: 24,
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  formTitle: {
+    color: "#1F2937",
+    fontWeight: "bold",
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    color: "#6B7280",
+    textAlign: 'center',
+    lineHeight: 18,
   },
   input: {
     marginBottom: 24,
+    backgroundColor: 'transparent',
   },
   resetButton: {
-    paddingVertical: 8,
+    borderRadius: 25,
+    backgroundColor: '#2E7D32',
     marginBottom: 16,
+  },
+  resetButtonContent: {
+    paddingVertical: 8,
   },
   backButton: {
     alignSelf: "center",
   },
-  successContainer: {
+  successContent: {
     alignItems: "center",
     marginBottom: 32,
   },
+  successTitle: {
+    color: "#1F2937",
+    fontWeight: "bold",
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   successText: {
     textAlign: "center",
-    marginTop: 16,
-    marginBottom: 8,
-    color: "#333",
+    marginBottom: 20,
+    color: "#1F2937",
+    lineHeight: 22,
+  },
+  emailText: {
+    fontWeight: '600',
+    color: "#2E7D32",
+  },
+  instructionBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
   },
   instructionText: {
-    textAlign: "center",
-    color: "#666",
+    color: "#6B7280",
+    flex: 1,
+  },
+  actionButtons: {
+    gap: 12,
+  },
+  tryAgainButton: {
+    borderRadius: 12,
+    borderColor: '#2E7D32',
   },
 })

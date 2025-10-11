@@ -263,39 +263,6 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </Surface>
 
-        {/* Quick Stats Grid */}
-        <View style={styles.statsGrid}>
-          <Surface style={styles.statCard} elevation={2}>
-            <Icon name="star" size={24} color="#FF9800" />
-            <Text variant="titleLarge" style={styles.statNumber}>
-              {userStats.reviewsCount}
-            </Text>
-            <Text variant="bodySmall" style={styles.statLabel}>
-              Reviews
-            </Text>
-          </Surface>
-          
-          <Surface style={styles.statCard} elevation={2}>
-            <Icon name="heart" size={24} color="#E91E63" />
-            <Text variant="titleLarge" style={styles.statNumber}>
-              {userStats.favoritesCount}
-            </Text>
-            <Text variant="bodySmall" style={styles.statLabel}>
-              Favorites
-            </Text>
-          </Surface>
-          
-          <Surface style={styles.statCard} elevation={2}>
-            <Icon name="thumb-up" size={24} color="#4CAF50" />
-            <Text variant="titleLarge" style={styles.statNumber}>
-              {userStats.helpfulVotes}
-            </Text>
-            <Text variant="bodySmall" style={styles.statLabel}>
-              Helpful
-            </Text>
-          </Surface>
-        </View>
-
         {/* MapMission Badge Section */}
         <Surface style={styles.badgeSection} elevation={3}>
           <View style={styles.badgeHeader}>
@@ -471,6 +438,7 @@ const styles = StyleSheet.create({
   avatarContainer: {
     position: 'relative',
     marginBottom: 16,
+    
   },
   avatarImage: {
     width: 100,

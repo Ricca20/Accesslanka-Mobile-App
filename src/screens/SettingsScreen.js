@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { View, StyleSheet, ScrollView, Alert, Linking } from "react-native"
-import { Text, Card, Switch, List, Divider, Button, SegmentedButtons, Chip, Dialog, Portal } from "react-native-paper"
+import { Text, Card, Switch, List, Divider, Button, Dialog, Portal } from "react-native-paper"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useTheme } from "../context/ThemeContext"
 import { useSettings } from "../context/SettingsContext"
@@ -14,10 +14,7 @@ export default function SettingsScreen() {
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
 
-  const handleThemeChange = (value) => {
-    triggerHapticFeedback('light')
-    setTheme(value)
-  }
+
 
   const handleSettingChange = (key, value) => {
     triggerHapticFeedback('light')
@@ -52,18 +49,7 @@ export default function SettingsScreen() {
   // Create dynamic styles based on current theme
   const styles = createStyles(currentTheme)
 
-  const getThemeDescription = () => {
-    switch (themeMode) {
-      case 'light':
-        return 'Always use light theme'
-      case 'dark':
-        return 'Always use dark theme'
-      case 'system':
-        return `Follow system (currently ${systemTheme || 'unknown'})`
-      default:
-        return 'Follow system preference'
-    }
-  }
+
 
   const accessibilitySettings = [
     {
@@ -254,87 +240,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Development Environment Info */}
-        {isExpoGo && (
-          <Card style={[styles.settingsCard, styles.infoCard]}>
-            <Card.Content>
-              <View style={styles.infoHeader}>
-                <List.Icon icon="information" color={currentTheme.colors.primary} size={24} />
-                <Text variant="titleMedium" style={styles.infoTitle}>
-                  Running in Expo Go
-                </Text>
-              </View>
-              <Text variant="bodyMedium" style={styles.infoDescription}>
-                Some features like push notifications require a development build. 
-                Your preferences are saved and will work when you create a development build.
-              </Text>
-            </Card.Content>
-          </Card>
-        )}
-
-        {/* Theme Settings - Prominent section */}
-        <Card style={[styles.settingsCard, styles.themeCard]}>
-          <Card.Content>
-            <View style={styles.themeHeader}>
-              <View style={styles.themeIconContainer}>
-                <List.Icon 
-                  icon={isDarkMode ? "weather-night" : "weather-sunny"} 
-                  color={currentTheme.colors.primary}
-                  size={32}
-                />
-              </View>
-              <View style={styles.themeInfo}>
-                <Text variant="titleLarge" style={styles.themeTitle}>
-                  Theme Preference
-                </Text>
-                <Text variant="bodyMedium" style={styles.themeDescription}>
-                  {getThemeDescription()}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.themeControls}>
-              <SegmentedButtons
-                value={themeMode}
-                onValueChange={handleThemeChange}
-                buttons={[
-                  {
-                    value: 'light',
-                    label: 'Light',
-                    icon: 'weather-sunny',
-                    style: styles.segmentButton,
-                  },
-                  {
-                    value: 'system',
-                    label: 'Auto',
-                    icon: 'theme-light-dark',
-                    style: styles.segmentButton,
-                  },
-                  {
-                    value: 'dark',
-                    label: 'Dark',
-                    icon: 'weather-night',
-                    style: styles.segmentButton,
-                  },
-                ]}
-                style={styles.segmentedButtons}
-              />
-              
-              {themeMode === 'system' && (
-                <View style={styles.systemThemeInfo}>
-                  <Chip 
-                    mode="outlined" 
-                    icon={systemTheme === 'dark' ? 'weather-night' : 'weather-sunny'}
-                    textStyle={styles.chipText}
-                    style={styles.systemChip}
-                  >
-                    System: {systemTheme === 'dark' ? 'Dark' : 'Light'}
-                  </Chip>
-                </View>
-              )}
-            </View>
-          </Card.Content>
-        </Card>
+        
 
         {/* Accessibility Settings */}
         <Card style={styles.settingsCard}>
@@ -526,13 +432,7 @@ const createStyles = (theme) => StyleSheet.create({
     shadowOpacity: theme.dark ? 0.3 : 0.1,
     shadowRadius: theme.dark ? 8 : 4,
   },
-  themeCard: {
-    marginTop: 8,
-    // Special styling for theme card
-    borderWidth: 2,
-    borderColor: theme.colors.primary + '20', // 20% opacity
-    elevation: theme.dark ? 12 : 6,
-  },
+
   infoCard: {
     marginTop: 8,
     backgroundColor: theme.colors.primaryContainer,
@@ -554,53 +454,7 @@ const createStyles = (theme) => StyleSheet.create({
     opacity: 0.9,
     lineHeight: 20,
   },
-  themeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  themeIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.colors.primary + '15', // 15% opacity
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  themeInfo: {
-    flex: 1,
-  },
-  themeTitle: {
-    color: theme.colors.onSurface,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  themeDescription: {
-    color: theme.colors.onSurface,
-    opacity: 0.8,
-  },
-  themeControls: {
-    gap: 16,
-  },
-  segmentedButtons: {
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  segmentButton: {
-    backgroundColor: 'transparent',
-  },
-  systemThemeInfo: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  systemChip: {
-    backgroundColor: theme.colors.surfaceContainer,
-    borderColor: theme.colors.outline,
-  },
-  chipText: {
-    color: theme.colors.onSurface,
-    fontSize: 12,
-  },
+
   sectionTitle: {
     color: theme.colors.primary,
     fontWeight: "bold",
