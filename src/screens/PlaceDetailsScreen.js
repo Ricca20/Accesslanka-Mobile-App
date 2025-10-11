@@ -342,6 +342,13 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
       return
     }
 
+    // Prevent users from marking their own reviews as helpful
+    const review = reviews.find(r => r.id === reviewId)
+    if (review?.user_id === user.id) {
+      Alert.alert('Cannot Mark Own Review', 'You cannot mark your own review as helpful.')
+      return
+    }
+
     try {
       if (isCurrentlyHelpful) {
         await DatabaseService.unmarkReviewHelpful(reviewId, user.id)
@@ -357,7 +364,7 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
               ...review,
               isHelpful: !isCurrentlyHelpful,
               helpful_count: isCurrentlyHelpful 
-                ? Math.max(0, review.helpful_count - 1)
+                ? Math.max(0, (review.helpful_count || 0) - 1)
                 : (review.helpful_count || 0) + 1
             }
           }
@@ -366,7 +373,12 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
       )
     } catch (error) {
       console.error('Error updating helpful status:', error)
-      Alert.alert('Error', 'Failed to update helpful status. Please try again.')
+      // Check for duplicate vote error (PostgreSQL unique violation)
+      if (error.code === '23505') {
+        Alert.alert('Already Voted', 'You have already marked this review as helpful.')
+      } else {
+        Alert.alert('Error', 'Failed to update helpful status. Please try again.')
+      }
     }
   }
 
@@ -385,41 +397,63 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
   const renderReview = (review) => {
     const formatDate = (dateString) => {
       const date = new Date(dateString)
+      const now = new Date()
+      const diffTime = Math.abs(now - date)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      
+      if (diffDays === 0) return 'Today'
+      if (diffDays === 1) return 'Yesterday'
+      if (diffDays < 7) return `${diffDays} days ago`
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`
+      
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     }
 
+    const userName = review.users?.full_name || 'Anonymous User'
+    const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+
     return (
-      <Card key={review.id} style={styles.reviewCard}>
-        <Card.Content>
-          {/* Review Header */}
+      <Card key={review.id} style={styles.reviewCard} elevation={2}>
+        <Card.Content style={styles.reviewCardContent}>
+          {/* Review Header with Avatar */}
           <View style={styles.reviewHeader}>
-            <View style={styles.reviewUserInfo}>
-              <View style={styles.reviewUserDetails}>
-                <Text variant="titleSmall" style={styles.reviewUserName}>
-                  {review.users?.full_name || 'Anonymous User'}
-                </Text>
+            <View style={styles.reviewUserSection}>
+              {/* User Avatar */}
+              <View style={styles.userAvatarContainer}>
+                <View style={[styles.userAvatar, { backgroundColor: review.users?.verified ? '#2E7D32' : '#9E9E9E' }]}>
+                  <Text style={styles.userAvatarText}>{userInitials}</Text>
+                </View>
                 {review.users?.verified && (
-                  <Icon name="check-decagram" size={16} color="#2E7D32" />
+                  <View style={styles.verifiedBadge}>
+                    <Icon name="check-decagram" size={14} color="#FFFFFF" />
+                  </View>
                 )}
               </View>
-              {/* Small badge for the reviewer */}
-              {review.user_id && (
-                <UserBadge userId={review.user_id} size="small" />
-              )}
-            </View>
-            <Text variant="bodySmall" style={styles.reviewDate}>
-              {formatDate(review.created_at)}
-            </Text>
-          </View>
 
-          {/* Overall Rating */}
-          <View style={styles.reviewRating}>
-            <View style={styles.starsContainer}>
-              {renderStars(review.overall_rating)}
+              {/* User Info */}
+              <View style={styles.reviewUserInfo}>
+                <View style={styles.reviewUserNameRow}>
+                  <Text variant="titleSmall" style={styles.reviewUserName}>
+                    {userName}
+                  </Text>
+                  {review.user_id && (
+                    <UserBadge userId={review.user_id} size="small" />
+                  )}
+                </View>
+                <Text variant="bodySmall" style={styles.reviewDate}>
+                  {formatDate(review.created_at)}
+                </Text>
+              </View>
             </View>
-            <Text variant="bodySmall" style={styles.ratingText}>
-              {review.overall_rating}/5
-            </Text>
+
+            {/* Overall Rating Badge */}
+            <View style={styles.ratingBadge}>
+              <Icon name="star" size={16} color="#FFD700" />
+              <Text variant="titleMedium" style={styles.ratingBadgeText}>
+                {review.overall_rating.toFixed(1)}
+              </Text>
+            </View>
           </View>
 
           {/* Review Title */}
@@ -434,49 +468,74 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
 
           {/* Accessibility Ratings */}
           {review.accessibility_ratings && Object.keys(review.accessibility_ratings).length > 0 && (
-            <View style={styles.reviewAccessibilityRatings}>
-              {Object.entries(review.accessibility_ratings).map(([featureKey, rating]) => {
-                // Skip the 'features' sub-object and only show top-level ratings
-                if (featureKey === 'features' || rating === 0 || typeof rating !== 'number') {
+            <View style={styles.reviewAccessibilitySection}>
+              <View style={styles.accessibilityHeader}>
+                <Icon name="wheelchair-accessibility" size={16} color="#2E7D32" />
+                <Text variant="labelMedium" style={styles.accessibilityHeaderText}>
+                  Accessibility Ratings
+                </Text>
+              </View>
+              <View style={styles.reviewAccessibilityRatings}>
+                {Object.entries(review.accessibility_ratings).map(([featureKey, rating]) => {
+                  // Skip the 'features' sub-object and only show top-level ratings
+                  if (featureKey === 'features' || rating === 0 || typeof rating !== 'number') {
+                    return null
+                  }
+                  
+                  // Show category ratings (mobility, visual, hearing, cognitive)
+                  if (rating > 0) {
+                    return (
+                      <View key={featureKey} style={styles.accessibilityRatingItem}>
+                        <Icon name={getFeatureIcon(featureKey)} size={16} color="#2E7D32" />
+                        <Text variant="bodySmall" style={styles.accessibilityRatingLabel}>
+                          {formatFeatureLabel(featureKey)}
+                        </Text>
+                        <View style={styles.miniStars}>
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Icon
+                              key={i}
+                              name={i < rating ? "star" : "star-outline"}
+                              size={10}
+                              color={i < rating ? "#FFD700" : "#E0E0E0"}
+                            />
+                          ))}
+                        </View>
+                        <Text variant="bodySmall" style={styles.accessibilityRatingValue}>
+                          {rating}/5
+                        </Text>
+                      </View>
+                    )
+                  }
                   return null
-                }
-                
-                // Show category ratings (mobility, visual, hearing, cognitive)
-                if (rating > 0) {
-                  return (
-                    <Chip key={featureKey} style={styles.accessibilityChip} compact>
-                      <Icon name={getFeatureIcon(featureKey)} size={14} color="#2E7D32" />
-                      {` ${formatFeatureLabel(featureKey)}: ${rating}/5`}
-                    </Chip>
-                  )
-                }
-                return null
-              })}
-              {/* Show detailed feature ratings if available */}
-              {review.accessibility_ratings.features && Object.entries(review.accessibility_ratings.features).map(([featureKey, rating]) => {
-                if (rating > 0) {
-                  return (
-                    <Chip key={`feature-${featureKey}`} style={styles.accessibilityChip} compact mode="outlined">
-                      <Icon name={getFeatureIcon(featureKey)} size={14} color="#2E7D32" />
-                      {` ${formatFeatureLabel(featureKey)}: ${rating}/5`}
-                    </Chip>
-                  )
-                }
-                return null
-              })}
+                })}
+                {/* Show detailed feature ratings if available */}
+                {review.accessibility_ratings.features && Object.entries(review.accessibility_ratings.features).map(([featureKey, rating]) => {
+                  if (rating > 0) {
+                    return (
+                      <Chip key={`feature-${featureKey}`} style={styles.featureChipOutlined} compact mode="outlined" textStyle={styles.featureChipText}>
+                        <Icon name={getFeatureIcon(featureKey)} size={12} color="#666" />
+                        {` ${formatFeatureLabel(featureKey)}: ${rating}/5`}
+                      </Chip>
+                    )
+                  }
+                  return null
+                })}
+              </View>
             </View>
           )}
 
-          {/* Helpful Button */}
+          {/* Review Actions */}
           <View style={styles.reviewActions}>
             <Button
-              mode="text"
+              mode={review.isHelpful ? "contained-tonal" : "outlined"}
               icon={review.isHelpful ? "thumb-up" : "thumb-up-outline"}
               compact
               onPress={() => handleHelpful(review.id, review.isHelpful || false)}
-              textColor={review.isHelpful ? "#2E7D32" : undefined}
+              buttonColor={review.isHelpful ? "#E8F5E8" : "transparent"}
+              textColor={review.isHelpful ? "#2E7D32" : "#666"}
+              style={styles.helpfulButton}
             >
-              Helpful ({review.helpful_count || 0})
+              {review.isHelpful ? 'Helpful' : 'Mark Helpful'} {review.helpful_count > 0 && `(${review.helpful_count})`}
             </Button>
           </View>
         </Card.Content>
@@ -963,15 +1022,24 @@ export default function PlaceDetailsScreen({ route = { params: {} }, navigation 
           {/* Reviews Section */}
           <View style={styles.section}>
             <View style={styles.reviewsHeader}>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                User Reviews ({reviews.length})
-              </Text>
+              <View style={styles.reviewsHeaderLeft}>
+                <Icon name="comment-multiple" size={28} color="#2E7D32" />
+                <View>
+                  <Text variant="titleLarge" style={styles.sectionTitle}>
+                    User Reviews
+                  </Text>
+                  <Text variant="bodySmall" style={styles.reviewsCount}>
+                    {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                  </Text>
+                </View>
+              </View>
               <Button
                 mode="contained"
-                icon="star-plus"
+                icon="plus"
                 compact
                 onPress={() => navigation.navigate('AddReview', { place: place })}
                 style={styles.addReviewButton}
+                labelStyle={styles.addReviewButtonLabel}
               >
                 Add Review
               </Button>
@@ -1299,70 +1367,184 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E8F5E8',
+  },
+  reviewsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  reviewsCount: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: -8,
   },
   addReviewButton: {
     backgroundColor: '#2E7D32',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+  },
+  addReviewButtonLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   reviewsList: {
-    gap: 12,
+    gap: 16,
   },
   reviewCard: {
-    marginBottom: 12,
-    elevation: 2,
+    marginBottom: 16,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2E7D32',
+  },
+  reviewCardContent: {
+    paddingVertical: 16,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  reviewUserInfo: {
+  reviewUserSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     flex: 1,
   },
-  reviewUserDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  userAvatarContainer: {
+    position: 'relative',
   },
-  reviewUserName: {
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  reviewDate: {
-    color: '#999',
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#2E7D32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
-  reviewRating: {
+  reviewUserInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  reviewUserNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  reviewUserName: {
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  reviewDate: {
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFBF0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFE5B4',
+  },
+  ratingBadgeText: {
+    color: '#FF9800',
+    fontWeight: 'bold',
   },
   reviewTitle: {
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: '#1F2937',
+    marginBottom: 12,
+    fontSize: 16,
+    lineHeight: 22,
   },
   reviewContent: {
-    color: '#666',
-    lineHeight: 22,
+    color: '#4B5563',
+    lineHeight: 24,
+    marginBottom: 16,
+    fontSize: 14,
+  },
+  reviewAccessibilitySection: {
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 12,
     marginBottom: 12,
   },
-  reviewAccessibilityRatings: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
+  accessibilityHeaderText: {
+    color: '#2E7D32',
+    fontWeight: '600',
   },
-  accessibilityChip: {
-    backgroundColor: '#E8F5E8',
+  reviewAccessibilityRatings: {
+    gap: 8,
+    marginTop: 8,
+  },
+  accessibilityRatingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  accessibilityRatingLabel: {
+    color: '#4B5563',
+    flex: 1,
+    fontWeight: '500',
+  },
+  miniStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  accessibilityRatingValue: {
+    color: '#6B7280',
+    fontWeight: 'bold',
+    fontSize: 12,
+    minWidth: 32,
+  },
+  featureChipOutlined: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     height: 28,
+  },
+  featureChipText: {
+    color: '#666',
+    fontSize: 11,
   },
   reviewActions: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  helpfulButton: {
+    borderRadius: 20,
+    borderColor: '#E5E7EB',
   },
   emptyReviews: {
     alignItems: 'center',

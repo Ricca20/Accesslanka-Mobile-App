@@ -272,6 +272,25 @@ export class DatabaseService {
     })
   }
 
+  // Helper function to notify about helpful vote updates (for refreshing review author's profile stats)
+  static helpfulVoteUpdatedCallbacks = new Set()
+  
+  static addHelpfulVoteUpdateListener(callback) {
+    this.helpfulVoteUpdatedCallbacks.add(callback)
+  }
+  
+  static removeHelpfulVoteUpdateListener(callback) {
+    this.helpfulVoteUpdatedCallbacks.delete(callback)
+  }
+  
+  static notifyHelpfulVoteUpdate(reviewAuthorUserId) {
+    this.helpfulVoteUpdatedCallbacks.forEach(callback => {
+      if (typeof callback === 'function') {
+        callback(reviewAuthorUserId)
+      }
+    })
+  }
+
   // Authentication
   static async signUp(email, password, fullName, accessibilityNeeds = '') {
     try {
@@ -1196,6 +1215,15 @@ export class DatabaseService {
   // Mark review as helpful
   static async markReviewHelpful(reviewId, userId) {
     try {
+      // First, get the review to find the author's user_id
+      const { data: reviewData, error: reviewError } = await supabase
+        .from('reviews')
+        .select('user_id')
+        .eq('id', reviewId)
+        .single()
+
+      if (reviewError) throw reviewError
+
       const { data, error } = await supabase
         .from('review_helpful')
         .insert([
@@ -1206,6 +1234,12 @@ export class DatabaseService {
         ])
 
       if (error) throw error
+
+      // Notify listeners that the review author's helpful count has changed
+      if (reviewData?.user_id) {
+        this.notifyHelpfulVoteUpdate(reviewData.user_id)
+      }
+
       return data
     } catch (error) {
       console.error('Error marking review helpful:', error)
@@ -1216,6 +1250,15 @@ export class DatabaseService {
   // Unmark review as helpful
   static async unmarkReviewHelpful(reviewId, userId) {
     try {
+      // First, get the review to find the author's user_id
+      const { data: reviewData, error: reviewError } = await supabase
+        .from('reviews')
+        .select('user_id')
+        .eq('id', reviewId)
+        .single()
+
+      if (reviewError) throw reviewError
+
       const { data, error } = await supabase
         .from('review_helpful')
         .delete()
@@ -1223,6 +1266,12 @@ export class DatabaseService {
         .eq('user_id', userId)
 
       if (error) throw error
+
+      // Notify listeners that the review author's helpful count has changed
+      if (reviewData?.user_id) {
+        this.notifyHelpfulVoteUpdate(reviewData.user_id)
+      }
+
       return data
     } catch (error) {
       console.error('Error unmarking review helpful:', error)

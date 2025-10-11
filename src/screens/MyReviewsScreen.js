@@ -109,9 +109,46 @@ export default function MyReviewsScreen({ navigation }) {
     )
   }
 
-  const renderReview = ({ item }) => (
-    <Card style={styles.reviewCard} onPress={() => {
-      // Navigate to place details with proper type identification
+  const handleNavigateToPlace = async (item) => {
+    try {
+      // Fetch full place/business data before navigating
+      let placeData = null
+      
+      if (item.business_id) {
+        placeData = await DatabaseService.getBusiness(item.business_id)
+        if (placeData) {
+          placeData = {
+            ...placeData,
+            type: 'business',
+            business_id: placeData.id,
+          }
+        }
+      } else if (item.place_id) {
+        placeData = await DatabaseService.getPlace(item.place_id)
+        if (placeData) {
+          placeData = {
+            ...placeData,
+            type: 'place',
+            place_id: placeData.id,
+          }
+        }
+      }
+      
+      // If we couldn't fetch full data, use minimal data as fallback
+      if (!placeData) {
+        placeData = {
+          id: item.business_id || item.place_id,
+          type: item.business_id ? 'business' : 'place',
+          business_id: item.business_id,
+          place_id: item.place_id,
+          name: item.business_name || item.place_name,
+        }
+      }
+      
+      navigation.navigate('PlaceDetails', { place: placeData })
+    } catch (error) {
+      console.error('Error fetching place data:', error)
+      // Fallback to minimal data
       const place = {
         id: item.business_id || item.place_id,
         type: item.business_id ? 'business' : 'place',
@@ -120,7 +157,11 @@ export default function MyReviewsScreen({ navigation }) {
         name: item.business_name || item.place_name,
       }
       navigation.navigate('PlaceDetails', { place })
-    }}>
+    }
+  }
+
+  const renderReview = ({ item }) => (
+    <Card style={styles.reviewCard} onPress={() => handleNavigateToPlace(item)}>
       <Card.Content>
         {/* Place Header */}
         <View style={styles.placeHeader}>
@@ -191,16 +232,7 @@ export default function MyReviewsScreen({ navigation }) {
             mode="text"
             compact
             icon="arrow-right"
-            onPress={() => {
-              const place = {
-                id: item.business_id || item.place_id,
-                type: item.business_id ? 'business' : 'place',
-                business_id: item.business_id,
-                place_id: item.place_id,
-                name: item.business_name || item.place_name,
-              }
-              navigation.navigate('PlaceDetails', { place })
-            }}
+            onPress={() => handleNavigateToPlace(item)}
           >
             View Place
           </Button>

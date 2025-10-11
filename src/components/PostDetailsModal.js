@@ -19,6 +19,7 @@ import {
   Chip,
   ActivityIndicator,
 } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../context/ThemeContext";
 import CommunityService from "../services/CommunityService";
 
@@ -209,23 +210,29 @@ const PostDetailsModal = ({
       <View key={comment.id} style={[styles.commentContainer, { marginLeft: depth * 20 }]}>
         <View style={styles.commentHeader}>
           <Avatar.Text
-            size={32}
+            size={36}
             label={comment.authorInitials || "U"}
             style={styles.commentAvatar}
+            labelStyle={styles.commentAvatarLabel}
           />
           <View style={styles.commentHeaderText}>
-            <Text variant="titleSmall" style={{ color: theme.colors.text }}>
+            <Text variant="titleSmall" style={styles.commentAuthorName}>
               {comment.author || "Anonymous"}
             </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.textSecondary }}>
-              {CommunityService.formatTimeAgo(comment.created_at)}
-            </Text>
+            <View style={styles.commentTimeRow}>
+              <Icon name="clock-time-four-outline" size={12} color="#999" />
+              <Text variant="bodySmall" style={styles.commentTimeText}>
+                {CommunityService.formatTimeAgo(comment.created_at)}
+              </Text>
+            </View>
           </View>
           {isAuthor && (
             <IconButton
               icon="delete"
-              size={16}
+              size={18}
+              iconColor="#D32F2F"
               onPress={() => handleDeleteComment(comment.id)}
+              style={styles.deleteCommentButton}
             />
           )}
         </View>
@@ -239,18 +246,25 @@ const PostDetailsModal = ({
 
         <View style={styles.commentActions}>
           <Button
-            mode="text"
+            mode={isLiked ? "contained-tonal" : "outlined"}
             compact
             icon={isLiked ? "heart" : "heart-outline"}
             onPress={() => handleToggleCommentLike(comment.id)}
+            buttonColor={isLiked ? "#FFEBEE" : "transparent"}
+            textColor={isLiked ? "#E91E63" : "#666"}
+            style={styles.commentActionButton}
+            labelStyle={styles.commentActionLabel}
           >
             {comment.likes_count || 0}
           </Button>
           <Button
-            mode="text"
+            mode="outlined"
             compact
             icon="reply"
             onPress={() => setReplyingTo(comment)}
+            textColor="#2E7D32"
+            style={styles.commentActionButton}
+            labelStyle={styles.commentActionLabel}
           >
             Reply
           </Button>
@@ -302,18 +316,29 @@ const PostDetailsModal = ({
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text variant="headlineSmall" style={{ color: theme.colors.text }}>
-              Post Details
-            </Text>
+            <View style={styles.headerLeft}>
+
+              <Text variant="headlineSmall" style={{ color: "#1A1A1A", fontWeight: "700" }}>
+                Post Details
+              </Text>
+            </View>
             <View style={styles.headerActions}>
               {isAuthor && (
                 <IconButton
                   icon="delete"
-                  size={20}
+                  size={22}
+                  iconColor="#D32F2F"
                   onPress={handleDeletePost}
+                  style={styles.headerButton}
                 />
               )}
-              <IconButton icon="close" size={20} onPress={onDismiss} />
+              <IconButton 
+                icon="close" 
+                size={22} 
+                onPress={onDismiss}
+                iconColor="#666"
+                style={styles.headerButton}
+              />
             </View>
           </View>
 
@@ -327,24 +352,35 @@ const PostDetailsModal = ({
             <View style={styles.postContainer}>
               <View style={styles.postHeader}>
                 <Avatar.Text
-                  size={40}
+                  size={48}
                   label={post.authorInitials || "U"}
+                  style={styles.postAvatar}
+                  labelStyle={styles.postAvatarLabel}
                 />
                 <View style={styles.postHeaderText}>
-                  <Text variant="titleMedium" style={{ color: theme.colors.text }}>
+                  <Text variant="titleMedium" style={styles.authorNameText}>
                     {post.author || "Anonymous"}
                   </Text>
-                  <Text
-                    variant="bodySmall"
-                    style={{ color: theme.colors.textSecondary }}
-                  >
-                    {CommunityService.formatTimeAgo(post.created_at)}
-                  </Text>
+                  <View style={styles.timeRow}>
+                    <Icon name="clock-outline" size={14} color="#999" />
+                    <Text
+                      variant="bodySmall"
+                      style={styles.timeText}
+                    >
+                      {CommunityService.formatTimeAgo(post.created_at)}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
               <View style={styles.categoryContainer}>
-                <Chip mode="outlined" compact>
+                <Chip 
+                  mode="flat" 
+                  compact
+                  style={styles.categoryChip}
+                  textStyle={styles.categoryChipText}
+                  icon={() => <Icon name="tag" size={14} color="#2E7D32" />}
+                >
                   {post.category}
                 </Chip>
               </View>
@@ -375,16 +411,18 @@ const PostDetailsModal = ({
 
               <View style={styles.postStats}>
                 <View style={styles.statItem}>
-                  <IconButton icon="heart" size={16} />
-                  <Text variant="bodySmall">{post.upvotes || 0}</Text>
+                  <Icon name="heart" size={20} color="#E91E63" />
+                  <Text variant="bodySmall" style={styles.statText}>{post.upvotes || 0}</Text>
+
                 </View>
                 <View style={styles.statItem}>
-                  <IconButton icon="comment" size={16} />
-                  <Text variant="bodySmall">{post.comments_count || 0}</Text>
+                  <Icon name="comment" size={20} color="#2196F3" />
+                  <Text variant="bodySmall" style={styles.statText}>{post.comments_count || 0}</Text>
                 </View>
                 <View style={styles.statItem}>
-                  <IconButton icon="eye" size={16} />
-                  <Text variant="bodySmall">{post.views_count || 0}</Text>
+                  <Icon name="eye" size={20} color="#FF9800" />
+                  <Text variant="bodySmall" style={styles.statText}>{post.views_count || 0}</Text>
+
                 </View>
               </View>
             </View>
@@ -477,10 +515,16 @@ const PostDetailsModal = ({
 
 const styles = StyleSheet.create({
   modalContainer: {
-    margin: 20,
-    maxHeight: "90%",
+    margin: 16,
+    maxHeight: "92%",
     minHeight: 500,
-    borderRadius: 10,
+    borderRadius: 20,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
   keyboardView: {
     flex: 1,
@@ -495,135 +539,304 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: 20,
+    paddingBottom: 16,
+    backgroundColor: "#FAFAFA",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerButton: {
+    margin: 0,
   },
   headerActions: {
     flexDirection: "row",
+    gap: 4,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   scrollViewContent: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
   postContainer: {
-    padding: 16,
+    padding: 20,
+    backgroundColor: "#FFFFFF",
   },
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 20,
+  },
+  postAvatar: {
+    backgroundColor: "#2E7D32",
+    elevation: 3,
+    shadowColor: "#2E7D32",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  postAvatarLabel: {
+    fontSize: 18,
+    fontWeight: "700",
   },
   postHeaderText: {
-    marginLeft: 12,
+    marginLeft: 14,
     flex: 1,
   },
+  authorNameText: {
+    color: "#1A1A1A",
+    fontWeight: "700",
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  timeText: {
+    color: "#999",
+    fontSize: 13,
+  },
   categoryContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+  },
+  categoryChip: {
+    backgroundColor: "#E8F5E9",
+    borderRadius: 20,
+  },
+  categoryChipText: {
+    color: "#2E7D32",
+    fontWeight: "700",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   postTitle: {
-    fontWeight: "bold",
-    marginBottom: 12,
+    fontWeight: "700",
+    marginBottom: 14,
+    fontSize: 22,
+    lineHeight: 30,
+    color: "#1A1A1A",
   },
   postContent: {
-    marginBottom: 16,
-    lineHeight: 24,
+    marginBottom: 20,
+    lineHeight: 26,
+    fontSize: 16,
+    color: "#444",
   },
   tagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 8,
   },
   tag: {
-    marginRight: 8,
-    marginBottom: 8,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 16,
   },
   postStats: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    gap: 12,
   },
   statItem: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 16,
+    justifyContent: "center",
+    backgroundColor: "#F8F9FA",
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+  },
+  statText: {
+    fontWeight: "700",
+    fontSize: 15,
+    color: "#1A1A1A",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#999",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   divider: {
-    marginVertical: 8,
+    marginVertical: 0,
+    height: 8,
+    backgroundColor: "#F5F5F5",
   },
   commentsSection: {
-    padding: 16,
+    padding: 20,
+    backgroundColor: "#FAFAFA",
   },
   commentsTitle: {
-    fontWeight: "bold",
-    marginBottom: 16,
+    fontWeight: "700",
+    marginBottom: 20,
+    fontSize: 18,
+    color: "#1A1A1A",
   },
   errorText: {
     color: "#d32f2f",
     marginBottom: 12,
     textAlign: "center",
+    backgroundColor: "#FFEBEE",
+    padding: 12,
+    borderRadius: 8,
   },
   loader: {
-    marginVertical: 24,
+    marginVertical: 32,
   },
   noCommentsText: {
     textAlign: "center",
-    marginVertical: 24,
+    marginVertical: 32,
     fontStyle: "italic",
+    fontSize: 15,
+    color: "#999",
   },
   commentContainer: {
     marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.1)",
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   commentHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   commentAvatar: {
-    backgroundColor: "#6200ee",
+    backgroundColor: "#2E7D32",
+    elevation: 2,
+    shadowColor: "#2E7D32",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  commentAvatarLabel: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   commentHeaderText: {
-    marginLeft: 8,
+    marginLeft: 12,
     flex: 1,
   },
+  commentAuthorName: {
+    color: "#1A1A1A",
+    fontWeight: "700",
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  commentTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  commentTimeText: {
+    color: "#999",
+    fontSize: 12,
+  },
+  deleteCommentButton: {
+    margin: 0,
+  },
   commentContent: {
-    marginLeft: 40,
-    marginBottom: 8,
-    lineHeight: 20,
+    marginLeft: 42,
+    marginBottom: 10,
+    lineHeight: 22,
+    fontSize: 15,
+    color: "#333",
   },
   commentActions: {
     flexDirection: "row",
-    marginLeft: 32,
+    marginLeft: 38,
+    gap: 8,
+    marginTop: 4,
+  },
+  commentActionButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  commentActionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
   },
   repliesContainer: {
-    marginTop: 8,
+    marginTop: 12,
+    marginLeft: 8,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#E8F5E9",
   },
   commentInputContainer: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
-    padding: 12,
+    borderTopColor: "#E8E8E8",
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   replyingToContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingBottom: 12,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 8,
+    marginBottom: 10,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
+    gap: 10,
   },
   commentInput: {
     flex: 1,
-    marginRight: 8,
     maxHeight: 100,
+    backgroundColor: "#F8F9FA",
   },
   sendButton: {
     alignSelf: "flex-end",
+    fontColor: "#FFFFFF",
+    borderRadius: 12,
+    elevation: 2,
+    buttonColor: "#2E7D32",
+    marginBottom: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
 });
 
