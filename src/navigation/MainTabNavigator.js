@@ -53,6 +53,15 @@ function MapMissionStack() {
   )
 }
 
+function CommunityStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="CommunityMain" component={CommunityScreen} options={{ title: "Community" }} />
+      <Stack.Screen name="PlaceDetails" component={PlaceDetailsScreen} options={{ title: "Place Details" }} />
+    </Stack.Navigator>
+  )
+}
+
 function ProfileStack() {
   return (
     <Stack.Navigator>
@@ -135,7 +144,7 @@ export default function MainTabNavigator() {
       />
       <Tab.Screen 
         name="Community" 
-        component={CommunityScreen}
+        component={CommunityStack}
         options={{
           tabBarAccessibilityLabel: AccessibilityService.navItemLabel("Community"),
           tabBarAccessibilityHint: AccessibilityService.buttonHint("view community posts and discussions"),

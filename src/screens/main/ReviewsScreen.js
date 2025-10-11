@@ -54,7 +54,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Priya Silva',
       user_avatar: null,
       created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true // Flag to identify dummy data
     },
     {
@@ -71,7 +71,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Kamal Perera',
       user_avatar: null,
       created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true
     },
     {
@@ -88,7 +88,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Nisali Fernando',
       user_avatar: null,
       created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true
     },
     {
@@ -105,7 +105,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Rajith Kumar',
       user_avatar: null,
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true
     },
     {
@@ -122,7 +122,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Amara Jayasinghe',
       user_avatar: null,
       created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true
     },
     {
@@ -139,7 +139,7 @@ export default function ReviewsScreen({ navigation }) {
       user_name: 'Sanduni Perera',
       user_avatar: null,
       created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
-      is_helpful: false,
+      isHelpful: false,
       isDummy: true
     }
   ]
@@ -230,6 +230,12 @@ export default function ReviewsScreen({ navigation }) {
       return
     }
 
+    // Prevent users from marking their own reviews as helpful
+    if (review?.user_id === user.id) {
+      Alert.alert('Cannot Mark Own Review', 'You cannot mark your own review as helpful.')
+      return
+    }
+
     try {
       if (isCurrentlyHelpful) {
         await DatabaseService.unmarkReviewHelpful(reviewId, user.id)
@@ -245,8 +251,8 @@ export default function ReviewsScreen({ navigation }) {
               ...review,
               isHelpful: !isCurrentlyHelpful,
               helpful_count: isCurrentlyHelpful 
-                ? Math.max(0, review.helpful_count - 1)
-                : review.helpful_count + 1
+                ? Math.max(0, (review.helpful_count || 0) - 1)
+                : (review.helpful_count || 0) + 1
             }
           }
           return review
@@ -254,7 +260,12 @@ export default function ReviewsScreen({ navigation }) {
       )
     } catch (error) {
       console.error('Error updating helpful status:', error)
-      Alert.alert('Error', 'Failed to update helpful status. Please try again.')
+      // Check for duplicate vote error (PostgreSQL unique violation)
+      if (error.code === '23505') {
+        Alert.alert('Already Voted', 'You have already marked this review as helpful.')
+      } else {
+        Alert.alert('Error', 'Failed to update helpful status. Please try again.')
+      }
     }
   }
 

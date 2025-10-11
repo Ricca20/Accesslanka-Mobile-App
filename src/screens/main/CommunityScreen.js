@@ -135,11 +135,15 @@ export default function CommunityScreen() {
   }
 
   const handleCategoryChange = (category) => {
-    setSelectedCategory(category)
+    // If clicking on already selected category, deselect it and show all
+    if (selectedCategory === category) {
+      setSelectedCategory("all")
+    } else {
+      setSelectedCategory(category)
+    }
   }
 
   const categories = [
-    { key: "all", label: "All" },
     { key: "questions", label: "Questions" },
     { key: "tips", label: "Tips" },
     { key: "discussion", label: "Discussion" },
@@ -147,10 +151,14 @@ export default function CommunityScreen() {
 
   const getCategoryIcon = (category) => {
     switch (category) {
+      case "all":
+        return "view-grid"
       case "questions":
         return "help-circle"
       case "tips":
         return "lightbulb"
+      case "discussion":
+        return "forum"
       default:
         return "forum"
     }
@@ -158,12 +166,16 @@ export default function CommunityScreen() {
 
   const getCategoryColor = (category) => {
     switch (category) {
+      case "all":
+        return "#2E7D32"
       case "questions":
         return "#2196F3"
       case "tips":
         return "#4CAF50"
-      default:
+      case "discussion":
         return "#FF9800"
+      default:
+        return "#ddddddff"
     }
   }
 
@@ -196,7 +208,7 @@ export default function CommunityScreen() {
                 </View>
               </View>
             </View>
-            <View style={styles.categoryBadge}>
+            <View style={styles.categoryBadge} backgroundColor={getCategoryColor(item.category) + '15'} >
               <Icon name={getCategoryIcon(item.category)} size={14} color={getCategoryColor(item.category)} />
               <Text style={[styles.categoryBadgeText, { color: getCategoryColor(item.category) }]}>
                 {item.category}
@@ -343,9 +355,7 @@ export default function CommunityScreen() {
             <Icon name="account-group" size={28} color="#2E7D32" />
           </View>
           <View style={styles.headerTextContainer}>
-            <Text variant="headlineSmall" style={styles.title}>
-              Community
-            </Text>
+
             <Text variant="bodyMedium" style={styles.subtitle}>
               Connect, share experiences, and help each other
             </Text>
@@ -355,6 +365,9 @@ export default function CommunityScreen() {
         <View style={styles.filterContainer}>
           {categories.map((category) => {
             const isSelected = selectedCategory === category.key
+            const categoryColor = getCategoryColor(category.key)
+            const categoryIcon = getCategoryIcon(category.key)
+            
             return (
               <Chip
                 key={category.key}
@@ -362,17 +375,21 @@ export default function CommunityScreen() {
                 onPress={() => handleCategoryChange(category.key)}
                 style={[
                   styles.filterChip,
-                  isSelected && styles.filterChipSelected
+                  isSelected && { 
+                    backgroundColor: categoryColor,
+                    borderColor: categoryColor 
+                  }
                 ]}
                 textStyle={[
                   styles.filterChipText,
+                  !isSelected && { color: categoryColor },
                   isSelected && styles.filterChipTextSelected
                 ]}
                 icon={() => (
                   <Icon 
-                    name={category.key === 'all' ? 'view-grid' : category.key === 'questions' ? 'help-circle' : category.key === 'tips' ? 'lightbulb' : 'forum'} 
+                    name={categoryIcon} 
                     size={16} 
-                    color={isSelected ? '#FFFFFF' : '#2E7D32'} 
+                    color={isSelected ? '#FFFFFF' : categoryColor} 
                   />
                 )}
                 accessibilityLabel={`Filter by ${category.label} posts`}
@@ -382,6 +399,27 @@ export default function CommunityScreen() {
             )
           })}
         </View>
+
+        {selectedCategory !== "all" && (
+          <View style={styles.filterStatusContainer}>
+            <Text variant="bodySmall" style={[
+              styles.filterStatusText,
+              { color: getCategoryColor(selectedCategory) }
+            ]}>
+              Showing {categories.find(c => c.key === selectedCategory)?.label || "All"} posts
+            </Text>
+            <Button
+              mode="text"
+              compact
+              onPress={() => setSelectedCategory("all")}
+              textColor={getCategoryColor(selectedCategory)}
+              style={styles.clearFilterButton}
+              labelStyle={styles.clearFilterLabel}
+            >
+              Clear
+            </Button>
+          </View>
+        )}
       </View>
 
       {loading && !refreshing ? (
@@ -493,13 +531,39 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   subtitle: {
-    color: "#666",
+    color: "#2E7D32",
     lineHeight: 20,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   filterContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+  },
+  filterStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    gap: 8,
+  },
+  filterStatusText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    fontStyle: "italic",
+    marginTop: 10,
+  },
+  clearFilterButton: {
+    marginLeft: "auto",
+    marginTop: 2,
+  },
+  clearFilterLabel: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   filterChip: {
     marginBottom: 8,
@@ -587,8 +651,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: "#F5F5F5",
   },

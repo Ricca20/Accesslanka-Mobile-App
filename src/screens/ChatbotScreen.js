@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Animated,
 } from 'react-native'
 import {
   TextInput,
@@ -23,15 +24,20 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import * as Location from 'expo-location'
 import { ChatbotService } from '../services/ChatbotService'
+import { useAuth } from '../context/AuthContext'
 
 export default function ChatbotScreen({ navigation }) {
   const theme = useTheme()
+  const { user } = useAuth()
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
   const [suggestions, setSuggestions] = useState([])
   const flatListRef = useRef(null)
+  const typingAnim1 = useRef(new Animated.Value(0)).current
+  const typingAnim2 = useRef(new Animated.Value(0)).current
+  const typingAnim3 = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     // Get user location
@@ -44,6 +50,46 @@ export default function ChatbotScreen({ navigation }) {
       ChatbotService.getDefaultSuggestions()
     )
   }, [])
+
+  useEffect(() => {
+    if (isTyping) {
+      // Animated typing dots
+      const createDotAnimation = (animValue, delay) => {
+        return Animated.loop(
+          Animated.sequence([
+            Animated.delay(delay),
+            Animated.timing(animValue, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+            Animated.timing(animValue, {
+              toValue: 0,
+              duration: 400,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      }
+
+      const anim1 = createDotAnimation(typingAnim1, 0)
+      const anim2 = createDotAnimation(typingAnim2, 150)
+      const anim3 = createDotAnimation(typingAnim3, 300)
+
+      anim1.start()
+      anim2.start()
+      anim3.start()
+
+      return () => {
+        anim1.stop()
+        anim2.stop()
+        anim3.stop()
+        typingAnim1.setValue(0)
+        typingAnim2.setValue(0)
+        typingAnim3.setValue(0)
+      }
+    }
+  }, [isTyping])
 
   const getUserLocation = async () => {
     try {
@@ -133,12 +179,20 @@ export default function ChatbotScreen({ navigation }) {
           <View style={[styles.messageBubble, styles.userBubble, { backgroundColor: theme.colors.primary }]}>
             <Text style={styles.userMessageText}>{item.text}</Text>
           </View>
-          <Avatar.Icon
-            size={40}
-            icon="account"
-            style={styles.avatar}
-            color={theme.colors.primary}
-          />
+          {user?.avatar_url ? (
+            <Avatar.Image
+              size={40}
+              source={{ uri: user.avatar_url }}
+              style={styles.avatar}
+            />
+          ) : (
+            <Avatar.Icon
+              size={40}
+              icon="account"
+              style={styles.avatar}
+              color={theme.colors.primary}
+            />
+          )}
         </View>
       )
     }
@@ -162,36 +216,50 @@ export default function ChatbotScreen({ navigation }) {
                 <TouchableOpacity
                   key={place.id}
                   onPress={() => handlePlacePress(place)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
+                  style={styles.placeCardTouchable}
                 >
-                  <Card style={styles.placeCard} mode="outlined">
-                    <Card.Content>
+                  <Card style={styles.placeCard} mode="elevated">
+                    <Card.Content style={styles.placeCardContent}>
                       <View style={styles.placeHeader}>
                         <View style={styles.placeInfo}>
-                          <Title style={styles.placeTitle}>{place.name}</Title>
-                          <Paragraph style={styles.placeCategory}>
-                            {place.category?.replace('s', '') || 'Place'}
-                          </Paragraph>
+                          <View style={styles.placeTitleRow}>
+                            <Title style={styles.placeTitle}>{place.name}</Title>
+                            {place.verified && (
+                              <Icon name="check-decagram" size={22} color="#048221ff" />
+                            )}
+                          </View>
+                          <View style={styles.categoryBadge}>
+                            <Text style={styles.placeCategory}>
+                              {place.category?.replace('s', '') || 'Place'}
+                            </Text>
+                          </View>
                         </View>
-                        {place.verified && (
-                          <Icon name="check-decagram" size={20} color={theme.colors.primary} />
-                        )}
                       </View>
                       
                       <View style={styles.placeDetails}>
                         <View style={styles.placeDetailRow}>
-                          <Icon name="map-marker" size={16} color={theme.colors.primary} />
-                          <Paragraph style={styles.placeAddress} numberOfLines={1}>
+                          <View style={styles.iconCircle}>
+                            <Icon name="map-marker" size={14} color="#048221ff" />
+                          </View>
+                          <Paragraph style={styles.placeAddress} numberOfLines={2}>
                             {place.address}
                           </Paragraph>
                         </View>
                         
                         {place.distance && (
                           <View style={styles.placeDetailRow}>
-                            <Icon name="map-marker-distance" size={16} color={theme.colors.secondary} />
+                            <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
+                              <Icon name="map-marker-distance" size={14} color="#048221ff" />
+                            </View>
                             <Text style={styles.distanceText}>{formatDistance(place.distance)}</Text>
                           </View>
                         )}
+                      </View>
+                      
+                      <View style={styles.viewDetailsHint}>
+                        <Text style={styles.viewDetailsText}>Tap to view details</Text>
+                        <Icon name="chevron-right" size={16} color="#048221ff" />
                       </View>
                     </Card.Content>
                   </Card>
@@ -215,11 +283,65 @@ export default function ChatbotScreen({ navigation }) {
           style={[styles.avatar, { backgroundColor: theme.colors.primaryContainer }]}
           color={theme.colors.primary}
         />
-        <View style={[styles.messageBubble, styles.botBubble, { backgroundColor: theme.colors.surfaceVariant }]}>
+        <View style={[styles.messageBubble, styles.botBubble]}>
           <View style={styles.typingIndicator}>
-            <View style={[styles.typingDot, { backgroundColor: theme.colors.onSurfaceVariant }]} />
-            <View style={[styles.typingDot, { backgroundColor: theme.colors.onSurfaceVariant }]} />
-            <View style={[styles.typingDot, { backgroundColor: theme.colors.onSurfaceVariant }]} />
+            <Animated.View
+              style={[
+                styles.typingDot,
+                {
+                  opacity: typingAnim1.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                  transform: [
+                    {
+                      translateY: typingAnim1.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -4],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.typingDot,
+                {
+                  opacity: typingAnim2.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                  transform: [
+                    {
+                      translateY: typingAnim2.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -4],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.typingDot,
+                {
+                  opacity: typingAnim3.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                  transform: [
+                    {
+                      translateY: typingAnim3.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, -4],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
           </View>
         </View>
       </View>
@@ -295,7 +417,6 @@ export default function ChatbotScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
   },
   messagesList: {
     padding: 16,
@@ -303,8 +424,8 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    alignItems: 'flex-start',
+    marginBottom: 20,
+    alignItems: 'flex-end',
   },
   userMessageContainer: {
     justifyContent: 'flex-end',
@@ -314,86 +435,144 @@ const styles = StyleSheet.create({
   },
   avatar: {
     marginHorizontal: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   botContent: {
     flex: 1,
-    marginRight: 40,
+    marginRight: 48,
   },
   messageBubble: {
-    padding: 14,
-    borderRadius: 18,
-    maxWidth: '80%',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    padding: 16,
+    borderRadius: 20,
+    maxWidth: '85%',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   userBubble: {
     backgroundColor: '#048221ff',
-    borderBottomRightRadius: 12,
+    borderBottomRightRadius: 4,
     marginRight: 8,
   },
   botBubble: {
-    backgroundColor: '#E0E0E0',
-    borderBottomLeftRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 4,
     marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   userMessageText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
   },
   botMessageText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
+    color: '#2C2C2C',
   },
   placesContainer: {
-    marginTop: 12,
+    marginTop: 16,
     marginLeft: 8,
   },
+  placeCardTouchable: {
+    marginBottom: 14,
+  },
   placeCard: {
-    marginBottom: 12,
     borderRadius: 16,
-    elevation: 5,
-    borderWidth: 0.5,
-    borderColor: '#E0E0E0',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  placeCardContent: {
+    padding: 16,
   },
   placeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   placeInfo: {
     flex: 1,
   },
+  placeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
   placeTitle: {
     fontSize: 18,
-    marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#1A1A1A',
+    flex: 1,
+    marginBottom: 0,
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F0F8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   placeCategory: {
-    fontSize: 14,
-    textTransform: 'capitalize',
-    opacity: 0.7,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    color: '#048221ff',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   placeDetails: {
-    marginTop: 8,
+    marginBottom: 12,
   },
   placeDetailRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  iconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F0F8F0',
     alignItems: 'center',
-    marginBottom: 6,
+    justifyContent: 'center',
+    marginRight: 10,
   },
   placeAddress: {
     fontSize: 14,
-    marginLeft: 6,
     flex: 1,
+    color: '#555',
+    lineHeight: 20,
+    marginTop: 4,
   },
   distanceText: {
     fontSize: 14,
-    marginLeft: 6,
+    fontWeight: '700',
+    color: '#048221ff',
+    marginTop: 4,
+  },
+  viewDetailsHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F5',
+  },
+  viewDetailsText: {
+    fontSize: 13,
+    color: '#048221ff',
     fontWeight: '600',
+    marginRight: 4,
   },
   featuresContainer: {
     flexDirection: 'row',
@@ -419,42 +598,54 @@ const styles = StyleSheet.create({
   typingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 4,
+    padding: 8,
   },
   typingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginHorizontal: 3,
-    opacity: 0.6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 2,
+    backgroundColor: '#999',
+    opacity: 0.7,
   },
   suggestionsContainer: {
-    padding: 14,
-    paddingTop: 8,
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: '#E8E8E8',
+    backgroundColor: '#FAFAFA',
   },
   suggestionsTitle: {
-    fontSize: 14,
-    marginBottom: 8,
-    fontWeight: '600',
+    fontSize: 13,
+    marginBottom: 10,
+    fontWeight: '700',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   suggestionChip: {
     marginRight: 10,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#048221ff',
   },
   inputContainer: {
-    padding: 14,
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    borderRadius: 12,
-    margin: 8,
-    marginTop: 12,
+    borderTopColor: '#E8E8E8',
+    backgroundColor: '#FFFFFF',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#F8F8F8',
     maxHeight: 100,
-    paddingLeft: 12,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
   },
 })

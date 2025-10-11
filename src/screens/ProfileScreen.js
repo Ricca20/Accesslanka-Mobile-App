@@ -46,11 +46,20 @@ export default function ProfileScreen({ navigation }) {
         }
       }
       
-      DatabaseService.addContributionUpdateListener(handleContributionUpdate)
+      // Listen for helpful vote updates (when someone marks this user's reviews as helpful)
+      const handleHelpfulVoteUpdate = (reviewAuthorUserId) => {
+        if (reviewAuthorUserId === user.id) {
+          loadUserStats() // Refresh stats immediately when someone marks this user's review as helpful
+        }
+      }
       
-      // Cleanup listener on unmount
+      DatabaseService.addContributionUpdateListener(handleContributionUpdate)
+      DatabaseService.addHelpfulVoteUpdateListener(handleHelpfulVoteUpdate)
+      
+      // Cleanup listeners on unmount
       return () => {
         DatabaseService.removeContributionUpdateListener(handleContributionUpdate)
+        DatabaseService.removeHelpfulVoteUpdateListener(handleHelpfulVoteUpdate)
       }
     }
   }, [user])

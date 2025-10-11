@@ -109,9 +109,7 @@ export default function CreatePostModal({ visible, onDismiss, onSubmit }) {
         >
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <View style={styles.headerIconContainer}>
-                <Icon name="pencil" size={32} color="#2E7D32" />
-              </View>
+
               <Text variant="headlineMedium" style={styles.headerTitle}>
                 Create a Post
               </Text>
@@ -296,7 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     margin: 20,
     borderRadius: 16,
-    maxHeight: '90%',
+    maxHeight: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -322,7 +320,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1A1A1A',
+    color: '#2E7D32',
     textAlign: 'center',
   },
   headerSubtitle: {
@@ -447,6 +445,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderColor: '#E0E0E0',
     borderWidth: 2,
+    marginBottom: 32,
   },
   cancelButtonLabel: {
     fontWeight: '600',
@@ -460,6 +459,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+    marginBottom: 32,
   },
   submitButtonLabel: {
     fontWeight: '600',
