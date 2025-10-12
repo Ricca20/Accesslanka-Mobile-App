@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, Alert } from 'react-native'
-import { Text, Switch, Button, Surface, Divider, Chip } from 'react-native-paper'
+import { Text, Switch, Card, Button, Divider, Chip } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import { useAuth } from '../context/AuthContext'
-import { LinearGradient } from 'expo-linear-gradient'
-import AccessibilityService from '../services/AccessibilityService'
 
 export default function AccessibilityPreferencesScreen({ navigation }) {
   const { user, updateProfile } = useAuth()
@@ -18,18 +16,12 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
   })
   const [priorityFeatures, setPriorityFeatures] = useState([])
 
-  useEffect(() => {
-    // Announce screen when loaded
-    AccessibilityService.announce("Accessibility Preferences screen. Customize your accessibility needs and preferences.", 500)
-  }, [])
-
   const accessibilityTypes = [
     {
       key: 'mobility',
       title: 'Mobility',
       description: 'Wheelchair access, ramps, elevators',
       icon: 'wheelchair-accessibility',
-      color: '#2E7D32',
       features: ['Wheelchair Access', 'Ramps', 'Elevators', 'Wide Doorways', 'Accessible Parking']
     },
     {
@@ -37,7 +29,6 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
       title: 'Visual',
       description: 'Braille, audio guides, high contrast',
       icon: 'eye',
-      color: '#2196F3',
       features: ['Braille Signage', 'Audio Guides', 'High Contrast', 'Large Print', 'Guide Dog Friendly']
     },
     {
@@ -45,7 +36,6 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
       title: 'Hearing',
       description: 'Sign language, hearing loops, visual alerts',
       icon: 'ear-hearing',
-      color: '#FF9800',
       features: ['Sign Language', 'Hearing Loops', 'Visual Alerts', 'Captions', 'Quiet Spaces']
     },
     {
@@ -53,7 +43,6 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
       title: 'Cognitive',
       description: 'Clear signage, simple navigation, quiet spaces',
       icon: 'brain',
-      color: '#9C27B0',
       features: ['Clear Signage', 'Simple Navigation', 'Quiet Environment', 'Staff Assistance', 'Calm Spaces']
     }
   ]
@@ -76,16 +65,13 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
       ...prev,
       [key]: !prev[key]
     }))
-    AccessibilityService.announce(`${key} accessibility ${!preferences[key] ? 'enabled' : 'disabled'}`)
   }
 
   const togglePriorityFeature = (feature) => {
     setPriorityFeatures(prev => {
       if (prev.includes(feature)) {
-        AccessibilityService.announce(`Removed ${feature} from priority features`)
         return prev.filter(f => f !== feature)
       } else {
-        AccessibilityService.announce(`Added ${feature} to priority features`)
         return [...prev, feature]
       }
     })
@@ -127,35 +113,28 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
     }
   }
 
-  const getActivePreferencesCount = () => {
-    return Object.values(preferences).filter(Boolean).length
-  }
-
   return (
-    <View style={styles.container}>
-      
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="headlineSmall" style={styles.title}>
+              Accessibility Preferences
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+              Help us show you the most relevant accessible places
+            </Text>
 
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Accessibility Types Section */}
-        <Surface style={styles.surface} elevation={3}>
-          <View style={styles.sectionHeader}>
-            <Icon name="account-cog" size={24} color="#2E7D32" />
+            <Divider style={styles.divider} />
+
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Your Accessibility Needs
             </Text>
-          </View>
 
-          <View style={styles.preferencesGrid}>
             {accessibilityTypes.map((type) => (
-              <Surface key={type.key} style={styles.preferenceCard} elevation={2}>
+              <View key={type.key} style={styles.preferenceItem}>
                 <View style={styles.preferenceHeader}>
-                  <View style={[styles.preferenceIcon, { backgroundColor: type.color }]}>
-                    <Icon name={type.icon} size={20} color="#FFFFFF" />
-                  </View>
+                  <Icon name={type.icon} size={24} color="#2E7D32" />
                   <View style={styles.preferenceInfo}>
                     <Text variant="titleSmall" style={styles.preferenceTitle}>
                       {type.title}
@@ -167,14 +146,14 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
                   <Switch
                     value={preferences[type.key]}
                     onValueChange={() => togglePreference(type.key)}
-                    color={type.color}
+                    color="#2E7D32"
                   />
                 </View>
 
                 {preferences[type.key] && (
                   <View style={styles.featuresContainer}>
                     <Text variant="labelSmall" style={styles.featuresLabel}>
-                      Priority features for {type.title}:
+                      Priority features:
                     </Text>
                     <View style={styles.featuresChips}>
                       {type.features.map((feature) => (
@@ -183,12 +162,8 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
                           mode={priorityFeatures.includes(feature) ? 'flat' : 'outlined'}
                           selected={priorityFeatures.includes(feature)}
                           onPress={() => togglePriorityFeature(feature)}
-                          style={[
-                            styles.featureChip,
-                            priorityFeatures.includes(feature) && { backgroundColor: type.color }
-                          ]}
+                          style={styles.featureChip}
                           compact
-                          textStyle={styles.chipText}
                         >
                           {feature}
                         </Chip>
@@ -196,190 +171,102 @@ export default function AccessibilityPreferencesScreen({ navigation }) {
                     </View>
                   </View>
                 )}
-              </Surface>
+              </View>
             ))}
-          </View>
-        </Surface>
 
-        {/* Information Section */}
-        <Surface style={styles.surface} elevation={2}>
-          <View style={styles.infoContainer}>
-            <View style={styles.infoIcon}>
-              <Icon name="information" size={24} color="#2196F3" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text variant="titleSmall" style={styles.infoTitle}>
-                How This Helps
-              </Text>
+            <Divider style={styles.divider} />
+
+            <View style={styles.infoBox}>
+              <Icon name="information" size={20} color="#2196F3" />
               <Text variant="bodySmall" style={styles.infoText}>
                 These preferences help us filter and prioritize accessible places for you. 
-                You can always change them later in your profile settings.
+                You can always change them later.
               </Text>
             </View>
-          </View>
-        </Surface>
 
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <Button
-            mode="outlined"
-            onPress={() => navigation.goBack()}
-            style={styles.cancelButton}
-            disabled={loading}
-            contentStyle={styles.buttonContent}
-          >
-            Cancel
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            loading={loading}
-            style={styles.saveButton}
-            disabled={loading}
-            contentStyle={styles.buttonContent}
-            buttonColor="#2E7D32"
-          >
-            Save Preferences
-          </Button>
-        </View>
+            <View style={styles.buttonContainer}>
+              <Button
+                mode="outlined"
+                onPress={() => navigation.goBack()}
+                style={styles.cancelButton}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSave}
+                loading={loading}
+                style={styles.saveButton}
+                disabled={loading}
+              >
+                Save Preferences
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F5F5F5',
   },
-  // Header Styles
-  headerGradient: {
-    paddingBottom: 20,
+  card: {
+    margin: 16,
+    elevation: 2,
   },
-  headerSafeArea: {
-    paddingTop: 10,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  headerPlaceholder: {
-    width: 40,
-  },
-  // Scroll View
-  scrollView: {
-    flex: 1,
-    marginTop: -10,
-  },
-  scrollContent: {
-    paddingBottom: 30,
-  },
-  // Main Surface
-  mainSurface: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 20,
-    marginTop: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  headerText: {
-    flex: 1,
-  },
-  sectionTitle: {
-    color: '#1F2937',
-    fontWeight: 'bold',
-  },
-  sectionDescription: {
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  // Stats Card
-  statsCard: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 20,
-    gap: 20,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
+  title: {
     color: '#2E7D32',
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  statLabel: {
-    color: '#6B7280',
-    textAlign: 'center',
+  subtitle: {
+    color: '#666',
+    marginBottom: 16,
   },
-  // Surface Styles
-  surface: {
-    marginHorizontal: 16,
-    marginTop: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 20,
+  divider: {
+    marginVertical: 16,
   },
-  // Preferences Grid
-  preferencesGrid: {
-    gap: 12,
+  sectionTitle: {
+    color: '#2E7D32',
+    fontWeight: 'bold',
+    marginBottom: 16,
   },
-  preferenceCard: {
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    gap: 12,
+  preferenceItem: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
   },
   preferenceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  preferenceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   preferenceInfo: {
     flex: 1,
   },
   preferenceTitle: {
-    color: '#1F2937',
-    fontWeight: '600',
-    marginBottom: 2,
+    color: '#2E7D32',
+    fontWeight: 'bold',
   },
   preferenceDescription: {
-    color: '#6B7280',
-    lineHeight: 16,
+    color: '#666',
+    marginTop: 2,
   },
-  // Features Container
   featuresContainer: {
+    marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#e0e0e0',
   },
   featuresLabel: {
-    color: '#6B7280',
+    color: '#666',
     marginBottom: 8,
-    fontWeight: '500',
   },
   featuresChips: {
     flexDirection: 'row',
@@ -389,52 +276,28 @@ const styles = StyleSheet.create({
   featureChip: {
     marginRight: 0,
   },
-  chipText: {
-    fontSize: 12,
-  },
-  // Info Container
-  infoContainer: {
+  infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-  },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    color: '#1F2937',
-    fontWeight: '600',
-    marginBottom: 4,
+    padding: 12,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    marginBottom: 24,
   },
   infoText: {
-    color: '#6B7280',
-    lineHeight: 20,
+    flex: 1,
+    color: '#1976d2',
   },
-  // Button Container
   buttonContainer: {
     flexDirection: 'row',
-    marginHorizontal: 16,
+    justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
-    borderRadius: 12,
-    borderColor: '#6B7280',
   },
   saveButton: {
     flex: 1,
-    borderRadius: 12,
-  },
-  buttonContent: {
-    paddingVertical: 8,
   },
 })
