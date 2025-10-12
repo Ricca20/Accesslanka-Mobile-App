@@ -42,6 +42,11 @@ export default {
           locationAlwaysAndWhenInUsePermission: "Allow AccessLanka to use your location to show nearby accessible places."
         }
       ]
-    ]
+    ],
+    extra: {
+      eas: {
+        projectId: "c1adebcb-8e79-4718-b524-7f4d7afd50f5"
+      }
+    }
   }
 }
