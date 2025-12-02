@@ -22,9 +22,7 @@ To create an inclusive society by providing comprehensive accessibility informat
 
 ---
 
-## Features
-
-### Core Features
+## Core Features
 
 - **Explore Places** - Browse and search for accessible businesses, attractions, and places
 - **Interactive Maps** - View locations on an interactive map with accessibility indicators
