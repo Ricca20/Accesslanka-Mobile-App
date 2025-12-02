@@ -23,7 +23,7 @@ import {
 } from 'react-native-paper'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import * as Location from 'expo-location'
-import { ChatbotService } from '../services/ChatbotService'
+import { ChatbotService } from '../backend/services/ChatbotService'
 import { useAuth } from '../context/AuthContext'
 
 export default function ChatbotScreen({ navigation }) {

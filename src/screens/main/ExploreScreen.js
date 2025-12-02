@@ -7,7 +7,7 @@ import * as Location from 'expo-location'
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { LinearGradient } from "expo-linear-gradient"
 import { DatabaseService } from "../../lib/database"
-import { DatabasePlacesService } from "../../services/DatabasePlacesService"
+import { DatabasePlacesService } from "../../backend/services/DatabasePlacesService"
 import AccessibilityService from "../../services/AccessibilityService"
 
 const { width, height } = Dimensions.get("window")

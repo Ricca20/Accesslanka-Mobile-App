@@ -9,7 +9,7 @@ import AppNavigator from "./src/navigation/AppNavigator"
 import { AuthProvider } from "./src/context/AuthContext"
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext"
 import { SettingsProvider } from "./src/context/SettingsContext"
-import { supabase } from "./src/lib/supabase"
+import { supabase } from "./src/config/supabase"
 
 function AppContent() {
   const { currentTheme, isDarkMode, transitionOpacity } = useTheme()

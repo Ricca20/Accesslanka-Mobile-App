@@ -4,7 +4,7 @@ import { Text, Card, Button, Avatar, Chip, FAB, ActivityIndicator, Snackbar } fr
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useFocusEffect } from "@react-navigation/native"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
-import { CommunityService } from "../../services/CommunityService"
+import { CommunityService } from "../../backend/services/CommunityService"
 import { useAuth } from "../../context/AuthContext"
 import CreatePostModal from "../../components/CreatePostModal"
 import PostDetailsModal from "../../components/PostDetailsModal"

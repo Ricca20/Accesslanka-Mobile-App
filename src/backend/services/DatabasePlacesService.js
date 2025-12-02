@@ -1,4 +1,4 @@
-import { DatabaseService } from '../lib/database'
+import { DatabaseService } from '../../lib/database'
 
 /**
  * Database Places Service

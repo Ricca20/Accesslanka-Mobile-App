@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native'
 import { Portal, Dialog, TextInput, Button, Text, HelperText } from 'react-native-paper'
 import { useTheme } from '../context/ThemeContext'
 import { DatabaseService } from '../lib/database'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../config/supabase'
 import AccessibilityService from '../services/AccessibilityService'
 
 export default function ChangePasswordModal({ visible, onDismiss, onSuccess }) {

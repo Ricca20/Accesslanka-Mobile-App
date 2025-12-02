@@ -1,5 +1,5 @@
-import { DatabaseService } from '../lib/database'
-import { supabase } from '../lib/supabase'
+import { DatabaseService } from '../../lib/database'
+import { supabase } from '../../config/supabase'
 
 /**
  * ChatbotService

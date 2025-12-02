@@ -21,7 +21,7 @@ import {
 } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../context/ThemeContext";
-import CommunityService from "../services/CommunityService";
+import CommunityService from "../backend/services/CommunityService";
 
 const PostDetailsModal = ({
   visible,

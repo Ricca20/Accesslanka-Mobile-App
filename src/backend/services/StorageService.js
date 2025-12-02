@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../config/supabase'
 import * as FileSystem from 'expo-file-system/legacy'
 
 /**

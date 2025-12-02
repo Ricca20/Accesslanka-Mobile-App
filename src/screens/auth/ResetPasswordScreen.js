@@ -4,7 +4,7 @@ import { Text, TextInput, Button, Card, ActivityIndicator } from "react-native-p
 import { SafeAreaView } from "react-native-safe-area-context"
 import Icon from "react-native-vector-icons/MaterialCommunityIcons"
 import { useAuth } from "../../context/AuthContext"
-import { supabase } from "../../lib/supabase"
+import { supabase } from "../../config/supabase"
 
 export default function ResetPasswordScreen({ navigation, route }) {
   const { updatePassword } = useAuth()
